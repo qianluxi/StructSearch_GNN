@@ -1,0 +1,33 @@
+如何改进？让模型学会“细粒度”区分
+如果你希望检索结果更符合肉眼的“几何相似度”，而不仅仅是“结构类型相似度”，你需要引入度量学习 (Metric Learning) 或 对比学习 (Contrastive Learning)。
+这里有几个低成本的改进方案，不需要大改模型架构：
+方案一：使用“未压缩”的特征 (Feature Map)
+目前的 embedding 是从最后一层（分类层之前）提取的。那一层已经为了分类被高度压缩了。
+尝试：在 model.py 里，不要用 global_mean_pool 之后的结果。
+改动：使用 conv3 输出的节点特征，做 Max Pooling 而不是 Mean Pooling，或者拼接 Mean 和 Max。
+或者，提取 conv2 层（倒数第二层）的特征做 Pooling。浅层的特征往往包含更多几何细节，深层特征包含更多语义类别信息。
+方案二：增加“重构损失” (Reconstruction Loss) - 强烈推荐
+让模型不仅要分类，还要能“画回”原来的图。这会强迫模型保留几何细节。
+原理：AutoEncoder (AE) 或 Graph AutoEncoder (GAE)。
+简单做法：
+在 model.py 的 forward 里，除了计算分类 logits，再加一个解码头（Decoder），试图预测节点的原始特征（比如面积、长宽比）。
+Loss = Classification_Loss + 0.5 * Reconstruction_Loss
+这样模型为了能还原出“这个柱子很大”，就不能在特征向量里把所有柱子都混为一谈。
+方案三：对比学习 (Contrastive Learning) - 你最擅长的
+回到你最开始的 repo 主题。
+构造正样本：图A 和 图A_rotated 是相似的（Label=1）。
+构造负样本：图A 和 图B（即使都是剪力墙）是不相似的（Label=0）。
+Loss：使用 ContrastiveLoss 或 TripletLoss。
+这会强迫模型：
+把 A 和 A的变体拉近 (Sim -> 1.0)
+把 A 和 B 推开 (Sim -> 0.5 或更低)
+现阶段的快速优化建议
+既然你已经有了一个不错的分类模型，且 Top 1~3 的类型正确，说明语义层面已经通了。
+如果想让相似度数值更“真实”（比如不那么相似的只有 0.7），可以尝试调整 Embedding 的提取方式，或者在检索时加入几何指纹校验。
+几何指纹校验 (Post-Ranking)：
+先用现在的模型取出 Top 10（它们都是同类的，但可能长得不像）。
+再用传统几何算法计算 Top 10 和 Query 的“物理相似度”：
+比如：计算两个图的“构件面积直方图”的差异。
+或者：计算“最大外轮廓长宽比”的差异。
+综合得分 = 0.7 * Model_Score + 0.3 * Geometric_Score。
+重新排序。
