@@ -36,3 +36,66 @@
 ### 环境依赖
 ```bash
 pip install torch torch-geometric ezdxf shapely scikit-learn matplotlib numpy
+```
+
+### 数据准备
+1.  在根目录下创建 `data/raw_dxf/` 文件夹。
+2.  将 DXF 文件放入该文件夹，文件名需包含类别关键词（如 `项目A_框剪_01.dxf`）。
+    *   支持类别：`剪力墙`, `框剪`, `框架`
+3.  运行训练脚本，程序会自动解析 DXF 并生成图数据。
+
+### 运行步骤
+
+#### 1. 训练模型
+```bash
+python train.py
+```
+*   训练完成后，最佳模型会保存至 `checkpoints/best_model.pth`。
+*   同时生成测试集准确率报告。
+
+#### 2. 构建特征索引库
+```bash
+python build_index.py
+```
+*   提取所有历史图纸的特征向量，保存至 `data/feature_index/`。
+
+#### 3. 检索相似图纸
+```bash
+python search.py --input data/raw_dxf/某个测试文件.dxf
+```
+*   输出预测的结构类型。
+*   输出最相似的 Top 5 历史案例及其相似度。
+
+#### 4. 特征可视化 (新增)
+```bash
+python visualize_features.py
+```
+*   生成 t-SNE / PCA 降维可视化图，展示不同结构类型在特征空间中的分布情况。
+
+## 📂 项目结构
+
+```text
+StructSearch_GNN/
+├── data/
+│   ├── raw_dxf/           # [Input] 原始 DXF 文件
+│   ├── processed/         # [Cache] PyG 处理后的图数据
+│   └── feature_index/     # [Output] 检索用的向量库
+├── src/
+│   ├── dataset.py         # 数据加载与图构建
+│   ├── dxf_utils.py       # DXF 几何解析工具
+│   ├── model.py           # GNN 模型定义
+│   └── config.py          # 全局配置参数
+├── train.py               # 训练脚本
+├── build_index.py         # 建库脚本
+├── search.py              # 检索脚本
+├── visualize_features.py  # 可视化分析工具
+└── README.md              # 说明文档
+```
+
+## 📊 效果展示
+
+*(此处可插入 visualize_features.py 生成的图片)*
+
+*   **分类性能**：模型能有效区分长条形剪力墙密布的结构（剪力墙）和点状柱分布的结构（框架）。
+*   **检索效果**：对于同类型的图纸，特征向量在空间中聚集紧密；不同类型的图纸被明显分开。
+
