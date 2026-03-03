@@ -1,9 +1,13 @@
 import torch
+import os
 
 # 路径配置
 DATA_ROOT = 'data'      # 数据根目录 (raw_dxf 在这里面)
-CHECKPOINT_DIR = 'checkpoints'
-MODEL_SAVE_PATH = 'checkpoints/best_model.pth'
+CHECKPOINT_DIR = "experiments/checkpoints"
+MODEL_NAME = "best_model.pth"
+EMBEDDING_DIR = "experiments/embeddings"
+MODEL_SAVE_PATH = os.path.join(CHECKPOINT_DIR, MODEL_NAME)
+
 
 # 训练超参数
 BATCH_SIZE = 32         # 显存够的话可以大一点，比如 64

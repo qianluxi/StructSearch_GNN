@@ -1,0 +1,32 @@
+# =========================
+# Retrieval / Classification Training Config
+# =========================
+
+
+device: "cuda"          # 或 "cpu"
+data_root: "data"       # 项目根目录下的 data 文件夹
+checkpoint_dir: "experiments/checkpoints"
+model_name: "best_model.pth"
+embedding_dir: "experiments/embeddings"
+
+data:
+  root: "data"        # 原始 DXF 文件目录
+  processed: "data/processed" # 保存处理后 graph 数据
+  splits: "data/splits"       # 可选训练/测试划分
+
+training:
+  batch_size: 16
+  num_epochs: 100
+  learning_rate: 0.001
+  checkpoint_dir: "experiments/checkpoints"
+  model_name: "best_model.pth"
+
+model:
+  backbone: "gin"   # 目前只支持 gin
+  hidden_dim: 128
+  num_layers: 3
+  num_classes: 5    # 分类类别数，按实际调整
+  num_node_features: 4   # 如果不写默认 4
+  
+embedding:
+  dim: 64           # embedding 输出维度
