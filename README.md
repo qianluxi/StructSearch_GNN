@@ -165,8 +165,8 @@ aspect_ratio = long_leg_length / short_leg_length
 表示构件形状：
 
 ```
-≈1  → 柱
->2  → 墙
+≈1~3  → 柱
+>4  → 墙
 ```
 
 ---
@@ -190,8 +190,8 @@ r = long_leg_length / thickness
 典型范围：
 
 ```
-柱        r ≈ 1
-短肢墙    r ≈ 3~8
+柱        r ≈ 1~3
+短肢墙    r ≈ 4~8
 剪力墙    r > 8
 ```
 
