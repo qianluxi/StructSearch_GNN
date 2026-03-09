@@ -103,39 +103,70 @@ class FeatureEngineering:
     # =========================================================
     def _build_node_features(self, nodes):
         """
-        构建每个节点的特征向量
+        构建节点特征向量（9维）
 
-        保留原始物理尺度信息
+        Feature layout
+        --------------------------
+        0  column flag
+        1  short wall flag
+        2  shear wall flag
+
+        3  area
+
+        4  L_long
+        5  L_short
+
+        6  long_leg_length
+        7  long_leg_thickness
+        8  r
         """
 
         features = []
 
         for n in nodes:
 
-            # -------- 类型 one-hot --------
+            # -------------------------
+            # 类型 one-hot
+            # -------------------------
             t = int(n["type"])
-            one_hot = np.zeros(3)
+
+            one_hot = np.zeros(3, dtype=float)
+
             if 0 <= t <= 2:
                 one_hot[t] = 1.0
 
-            # -------- 几何尺寸 --------
+            # -------------------------
+            # 基本几何
+            # -------------------------
             area = float(n["area"])
+
             Lx = float(n["Lx"])
             Ly = float(n["Ly"])
+
+            L_long = max(Lx, Ly)
+            L_short = min(Lx, Ly)
+
+            # -------------------------
+            # 墙肢参数
+            # (来自 dxf_parser)
+            # -------------------------
             long_leg_length = float(n["long_leg_length"])
             long_leg_thickness = float(n["long_leg_thickness"])
             r = float(n["r"])
 
             geom_features = np.array([
                 area,
-                Lx,
-                Ly,
+                L_long,
+                L_short,
                 long_leg_length,
                 long_leg_thickness,
                 r
-            ])
+            ], dtype=float)
 
             node_feature = np.concatenate([one_hot, geom_features])
+
             features.append(node_feature)
 
         return np.array(features, dtype=np.float32)
+
+
