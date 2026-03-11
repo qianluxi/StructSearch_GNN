@@ -53,6 +53,42 @@ print("最近邻距离均值:", raw_recovered[9].item())
 print("最近邻距离标准差:", raw_recovered[10].item())
 
 print("\n==== Node-level Info ====")
-print("Number of nodes:", data.x.shape[0])
-print("Node areas:", data.x[:, 7])  # 假设第7列是面积
-print("Positions:\n", data.pos)
+
+
+def print_node_debug(nodes, node_features, pos):
+    """
+    打印节点详细信息
+    """
+
+    print("\n==== Node-level Info ====")
+    print("节点数量:", len(nodes))
+    print()
+
+    for i, (node, feat) in enumerate(zip(nodes, node_features), 1):
+
+        print(f"节点 {i}")
+
+        print("  类型编码:")
+        print(f"    柱 Column      = {int(feat[0])}")
+        print(f"    短肢墙 ShortWall = {int(feat[1])}")
+        print(f"    剪力墙 Wall     = {int(feat[2])}")
+
+        print("  几何尺寸:")
+        print(f"    面积 area = {feat[3]:.2f}")
+
+        print("  尺寸:")
+        print(f"    L_long  = {feat[4]:.2f}")
+        print(f"    L_short = {feat[5]:.2f}")
+
+        print("  墙肢参数:")
+        print(f"    long_leg_length    = {feat[6]:.2f}")
+        print(f"    long_leg_thickness = {feat[7]:.2f}")
+        print(f"    r                  = {feat[8]:.2f}")
+
+        x, y = pos[i-1]
+
+        print("  位置坐标 (PCA对齐后):")
+        print(f"    ({x:.2f}, {y:.2f})")
+
+        print()
+

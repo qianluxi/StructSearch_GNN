@@ -1,0 +1,16 @@
+# 忽略Python字节码缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 可选：补充Python项目常见忽略项（推荐）
+# 虚拟环境
+venv/
+env/
+*.conda/
+*.env/
+
+# 系统文件
+.DS_Store
+*.swp
+*.swo

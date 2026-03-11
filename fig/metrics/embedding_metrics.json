@@ -1,0 +1,8 @@
+{
+    "silhouette_score": 0.484729528427124,
+    "davies_bouldin_index": 0.6496911749676147,
+    "calinski_harabasz_score": 75.82295733841944,
+    "top1_accuracy": 0.9591836734693877,
+    "top3_accuracy": 0.9795918367346939,
+    "top5_accuracy": 0.9795918367346939
+}
