@@ -1,0 +1,33 @@
+# 忽略Python字节码缓存
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 可选：补充Python项目常见忽略项（推荐）
+# 虚拟环境
+venv/
+env/
+*.conda/
+*.env/
+
+# 系统文件
+.DS_Store
+*.swp
+*.swo
+~$*
+
+# 原始数据（DXF 图纸不入库）
+data/raw/*.dxf
+data/*.dxf
+
+# 训练产物与输出
+checkpoints/
+fig/
+*.npy
+experiments/runs/
+
+# 根目录旧产物
+model.pt
+Figure_1.png
+gcn_vs_gin.png
+StructSearch_GNN_v1.5_Analysis_Report.pdf
