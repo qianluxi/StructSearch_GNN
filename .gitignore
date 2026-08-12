@@ -24,6 +24,7 @@ data/*.dxf
 checkpoints/
 fig/
 *.npy
+experiments/runs/
 
 # 根目录旧产物
 model.pt

@@ -28,12 +28,14 @@ def draw_structure(data, ax=None, title=None):
     if ax is None:
         fig, ax = plt.subplots(figsize=(4,4))
 
-    x_raw = data.x_raw.cpu().numpy() if hasattr(data,"x_raw") else data.x.cpu().numpy()
+    x_raw = data.x_raw.cpu().numpy() if hasattr(data, "x_raw") else data.x.cpu().numpy()
+
+    # 节点类型 one-hot 布局：0=Column(柱) 1=ShortWall(短肢墙) 2=Wall(剪力墙)
     node_type = np.argmax(x_raw[:, :3], axis=1)
 
-    wall_mask = node_type == 0
-    column_mask = node_type == 1
-    beam_mask = node_type == 2
+    column_mask = node_type == 0
+    short_wall_mask = node_type == 1
+    wall_mask = node_type == 2
 
     # ========= 使用真实坐标 =========
     pos = data.pos.cpu().numpy()
@@ -41,40 +43,40 @@ def draw_structure(data, ax=None, title=None):
     edge_index = data.edge_index.cpu().numpy()
 
     # edges
-    for i,j in edge_index.T:
+    for i, j in edge_index.T:
         ax.plot(
-            [pos[i,0], pos[j,0]],
-            [pos[i,1], pos[j,1]],
+            [pos[i, 0], pos[j, 0]],
+            [pos[i, 1], pos[j, 1]],
             color="gray",
             linewidth=0.7
         )
 
     # nodes
-    if wall_mask.any():
-        ax.scatter(
-            pos[wall_mask,0],
-            pos[wall_mask,1],
-            c="red",
-            s=80,
-            label="Wall"
-        )
-
     if column_mask.any():
         ax.scatter(
-            pos[column_mask,0],
-            pos[column_mask,1],
-            c="blue",
+            pos[column_mask, 0],
+            pos[column_mask, 1],
+            c="red",
             s=60,
             label="Column"
         )
 
-    if beam_mask.any():
+    if short_wall_mask.any():
         ax.scatter(
-            pos[beam_mask,0],
-            pos[beam_mask,1],
-            c="green",
+            pos[short_wall_mask, 0],
+            pos[short_wall_mask, 1],
+            c="blue",
             s=60,
-            label="Beam"
+            label="ShortWall"
+        )
+
+    if wall_mask.any():
+        ax.scatter(
+            pos[wall_mask, 0],
+            pos[wall_mask, 1],
+            c="green",
+            s=80,
+            label="Wall"
         )
 
     ax.set_aspect("equal")
@@ -228,7 +230,92 @@ def visualize_retrieval(
         plt.savefig(save_path, dpi=200)
         plt.close()
 
-        print("Saved to:", save_path)
+    print("Saved to:", save_path)
+
+
+def save_single_query_figure(
+        dataset,
+        query_dxf_path,
+        result,
+        save_dir,
+        k=6,
+        connect_mode="knn",
+        query_data=None):
+    """保存"查询图 + Top-K 相似案例"的对比图。
+
+    Args:
+        dataset: StructureDataset（检索库）
+        query_dxf_path: 查询 DXF 文件路径
+        result: SearchEngine.search() 返回的 dict（含 pred_class / results）
+        save_dir: 输出目录
+        k / connect_mode: 构图参数，须与建库时一致
+        query_data: 查询图 Data 对象（search() 已解析好，避免重复解析）；
+            为 None 时才回退到重新解析 DXF。
+
+    Returns:
+        save_path: 保存的图片路径；查询解析失败时返回 None。
+    """
+    from retrieval.processor import process_single_dxf
+
+    # Windows 中文字体，避免图中中文显示为方框
+    plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei"]
+    plt.rcParams["axes.unicode_minus"] = False
+
+    os.makedirs(save_dir, exist_ok=True)
+
+    if query_data is None:
+        query_data = process_single_dxf(
+            query_dxf_path,
+            k=k,
+            connect_mode=connect_mode
+        )
+    if query_data is None:
+        print("[Figure] 查询图解析失败，跳过检索对比图")
+        return None
+
+    # 在库中按文件名找 Top-K 对应的 Data
+    topk_datas = []
+    for item in result.get("results", []):
+        found = next(
+            (
+                d for d in dataset
+                if getattr(d, "filename", None) == item["filename"]
+            ),
+            None,
+        )
+        topk_datas.append((item, found))
+
+    topk = len(topk_datas)
+    fig, axes = plt.subplots(
+        1,
+        topk + 1,
+        figsize=(3 * (topk + 1), 3),
+    )
+
+    draw_structure(query_data, ax=axes[0], title="Query")
+
+    for rank, (item, data) in enumerate(topk_datas, start=1):
+        title = f"Top{rank}\nsim={item['score']:.2f}"
+        if data is not None:
+            draw_structure(data, ax=axes[rank], title=title)
+        else:
+            axes[rank].axis("off")
+            axes[rank].set_title(title, fontsize=9)
+
+    fig.suptitle(
+        f"Query: {os.path.basename(query_dxf_path)}  |  "
+        f"Pred: {result.get('pred_class', '')}",
+        fontsize=10,
+    )
+    plt.tight_layout()
+
+    stem = os.path.splitext(os.path.basename(query_dxf_path))[0]
+    save_path = os.path.join(save_dir, f"query_{stem}.png")
+    plt.savefig(save_path, dpi=200, bbox_inches="tight")
+    plt.close()
+
+    print(f"[Figure] 检索结果图已保存: {save_path}")
+    return save_path
 
 
 # =========================================================

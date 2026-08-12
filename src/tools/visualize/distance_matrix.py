@@ -2,10 +2,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import euclidean_distances
 
-from utils import get_next_filename
+try:
+    from utils import get_next_filename
+except ImportError:
+    from tools.visualize.utils import get_next_filename
 
 
-def plot_distance_matrix(embeddings):
+def plot_distance_matrix(embeddings, save_dir="fig/distance"):
 
     dist = euclidean_distances(embeddings)
 
@@ -17,7 +20,7 @@ def plot_distance_matrix(embeddings):
 
     plt.title("Embedding Distance Matrix")
 
-    path = get_next_filename("fig/distance", "distance")
+    path = get_next_filename(save_dir, "distance")
 
     plt.savefig(path)
     plt.close()

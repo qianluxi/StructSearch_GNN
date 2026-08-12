@@ -3,10 +3,13 @@ import matplotlib.pyplot as plt
 from sklearn.manifold import TSNE
 import numpy as np
 
-from utils import get_next_filename
+try:
+    from utils import get_next_filename
+except ImportError:
+    from tools.visualize.utils import get_next_filename
 
 
-def plot_tsne(embeddings, labels):
+def plot_tsne(embeddings, labels, save_dir="fig/tsne"):
 
     tsne = TSNE(
         n_components=2,
@@ -33,7 +36,7 @@ def plot_tsne(embeddings, labels):
     plt.legend()
     plt.title("Graph Embedding TSNE")
 
-    path = get_next_filename("fig/tsne", "tsne")
+    path = get_next_filename(save_dir, "tsne")
 
     plt.savefig(path)
     plt.close()

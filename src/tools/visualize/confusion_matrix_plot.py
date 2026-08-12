@@ -2,10 +2,13 @@ import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 
-from utils import get_next_filename
+try:
+    from utils import get_next_filename
+except ImportError:
+    from tools.visualize.utils import get_next_filename
 
 
-def plot_confusion_matrix(labels, preds):
+def plot_confusion_matrix(labels, preds, save_dir="fig/confusion"):
 
     cm = confusion_matrix(labels, preds)
 
@@ -23,7 +26,7 @@ def plot_confusion_matrix(labels, preds):
 
     plt.title("Confusion Matrix")
 
-    path = get_next_filename("fig/confusion", "confusion")
+    path = get_next_filename(save_dir, "confusion")
 
     plt.savefig(path)
     plt.close()

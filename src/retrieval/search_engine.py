@@ -108,7 +108,7 @@ class SearchEngine:
             topk: 返回的相似案例数，默认取配置中的 retrieval.topk
 
         Returns:
-            dict：query / pred_class / probability / results
+            dict：query / pred_class / probability / results / data
             （解析失败时返回 None）
         """
         topk = topk or getattr(self.cfg.retrieval, "topk", 5)
@@ -188,4 +188,7 @@ class SearchEngine:
             "pred_class": pred_class,
             "probability": prob,
             "results": results,
+            # 已解析的查询图数据（含 x_raw/pos），供结果图直接使用，
+            # 避免绘图时再次解析 DXF 并重复打印解析日志。
+            "data": data,
         }

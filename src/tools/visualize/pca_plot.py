@@ -2,10 +2,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 from sklearn.decomposition import PCA
 
-from utils import get_next_filename
+try:
+    from utils import get_next_filename
+except ImportError:
+    from tools.visualize.utils import get_next_filename
 
 
-def plot_pca(embeddings, labels):
+def plot_pca(embeddings, labels, save_dir="fig/pca"):
 
     pca = PCA(n_components=2)
 
@@ -28,7 +31,7 @@ def plot_pca(embeddings, labels):
 
     plt.title("Graph Embedding PCA")
 
-    path = get_next_filename("fig/pca", "pca")
+    path = get_next_filename(save_dir, "pca")
 
     plt.savefig(path)
     plt.close()
