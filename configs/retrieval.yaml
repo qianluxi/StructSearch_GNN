@@ -2,31 +2,37 @@
 # Retrieval / Classification Training Config
 # =========================
 
-
-device: "cuda"          # 或 "cpu"
-data_root: "data"       # 项目根目录下的 data 文件夹
-checkpoint_dir: "experiments/checkpoints"
-model_name: "best_model.pth"
-embedding_dir: "experiments/embeddings"
+device: "cuda"              # 或 "cpu"，代码会自动回退到可用设备
+data_root: "data"           # StructureDataset 根目录（其下需有 raw/ 与 processed/）
+checkpoint_dir: "checkpoints"
+model_name: "model.pt"
+embedding_dir: "experiments/embeddings"   # 索引产物输出目录
 
 data:
-  root: "data"        # 原始 DXF 文件目录
-  processed: "data/processed" # 保存处理后 graph 数据
-  splits: "data/splits"       # 可选训练/测试划分
+  root: "data"              # 原始 DXF 文件根目录
+  processed: "data/processed"  # 保存处理后 graph 数据
+  splits: "data/splits"     # 可选训练/测试划分
+
+graph:
+  k: 6                      # KNN 邻居数，必须与 processed 缓存一致
+  connect_mode: "knn"       # knn 或 radius
 
 training:
-  batch_size: 16
-  num_epochs: 100
+  batch_size: 8             # 与 src/training/train.py 一致
+  num_epochs: 50
   learning_rate: 0.001
-  checkpoint_dir: "experiments/checkpoints"
-  model_name: "best_model.pth"
+  checkpoint_dir: "checkpoints"
+  model_name: "model.pt"
 
 model:
-  backbone: "gin"   # 目前只支持 gin
-  hidden_dim: 128
+  backbone: "graph_encoder" # GraphEncoder (SAGEConv x3)
+  hidden_dim: 64
   num_layers: 3
-  num_classes: 5    # 分类类别数，按实际调整
-  num_node_features: 4   # 如果不写默认 4
-  
+  num_classes: 3            # 0=剪力墙 1=框剪 2=框架
+  num_node_features: 9      # 节点特征维度（见 AGENTS.md）
+
 embedding:
-  dim: 64           # embedding 输出维度
+  dim: 128                  # GraphEncoder 输出嵌入维度
+
+retrieval:
+  topk: 5                   # 默认返回 Top-K 相似案例

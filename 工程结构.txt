@@ -1,0 +1,95 @@
+StructSearch_v2/
+│
+├── configs/                     # 所有实验配置文件
+│   ├── base.yaml
+│   ├── gin_supcon.yaml
+│   ├── pretrain.yaml
+│   ├── finetune.yaml
+│   └── retrieval.yaml
+│
+├── data/
+│   ├── raw_dxf/                 # 原始 DXF 文件
+│   ├── processed/               # PyG Graph 数据缓存
+│   ├── feature_index/           # embedding 索引文件
+│   └── splits/                  # train/val/test 划分文件
+│
+├── src/
+│   ├── datasets/
+│   │   ├── dxf_parser.py
+│   │   ├── graph_builder.py
+│   │   ├── feature_engineering.py
+│   │   ├── statistics_features.py   # 显式统计特征模块（v2核心）
+│   │   └── struct_dataset.py
+│   │
+│   ├── models/
+│   │   ├── backbone/
+│   │   │   ├── gin.py
+│   │   │   ├── gcn.py
+│   │   │   └── graph_transformer.py (预留)
+│   │   │
+│   │   ├── pooling.py
+│   │   ├── projection_head.py
+│   │   ├── classifier_head.py
+│   │   └── struct_model.py        # 总模型封装
+│   │
+│   ├── losses/
+│   │   ├── supcon.py
+│   │   ├── contrastive_utils.py
+│   │   └── hybrid_loss.py
+│   │
+│   ├── augmentations/
+│   │   ├── spatial_aug.py
+│   │   ├── feature_aug.py
+│   │   └── graph_aug.py
+│   │
+│   ├── training/
+│   │   ├── trainer.py
+│   │   ├── pretrain.py
+│   │   ├── finetune.py
+│   │   └── evaluator.py
+│   │
+│   ├── retrieval/
+│   │   ├── embedder.py
+│   │   ├── faiss_index.py
+│   │   ├── similarity_metrics.py
+│   │   └── retrieval_engine.py
+│   │
+│   ├── metrics/
+│   │   ├── classification_metrics.py
+│   │   ├── retrieval_metrics.py
+│   │   └── distribution_metrics.py
+│   │
+│   ├── utils/
+│   │   ├── config_loader.py
+│   │   ├── logger.py
+│   │   ├── seed.py
+│   │   └── visualization.py
+│   │
+│   └── inference/
+│       ├── predict.py
+│       └── search.py
+│
+├── experiments/                 # 训练输出目录
+│   ├── logs/
+│   ├── checkpoints/
+│   └── embeddings/
+│
+├── scripts/
+│   ├── run_pretrain.sh
+│   ├── run_finetune.sh
+│   ├── build_index.sh
+│   └── search_demo.sh
+│
+├── tests/
+│   ├── test_dataset.py
+│   ├── test_model.py
+│   └── test_retrieval.py
+│
+├── notebooks/                   # 分析与可视化
+│   ├── embedding_tsne.ipynb
+│   └── distribution_analysis.ipynb
+│
+├── requirements.txt
+├── setup.py (可选)
+├── README.md
+└── main.py

@@ -23,8 +23,15 @@ def rotate_points(points, angle_deg):
 
 def main():
 
-    # 选一个文件
-    dxf_path = os.path.join(ROOT_DIR, "data", "raw", "test1剪力墙.dxf")
+    # 选一个文件（动态取 data/raw 下第一个 DXF，避免依赖特定文件名）
+    raw_dir = os.path.join(ROOT_DIR, "data", "raw")
+    dxf_files = sorted(
+        f for f in os.listdir(raw_dir) if f.endswith(".dxf")
+    )
+    if not dxf_files:
+        raise FileNotFoundError(f"data/raw 下没有 DXF 文件: {raw_dir}")
+
+    dxf_path = os.path.join(raw_dir, dxf_files[0])
 
     nodes = process_dxf_file(dxf_path)
 
