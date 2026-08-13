@@ -175,7 +175,7 @@ class StructureDataset(InMemoryDataset):
             if node_features is None or aligned_pos is None:
                 continue
 
-            node_feature_list.append(node_features.numpy())
+            node_feature_list.append(node_features)
 
             graph_data = self.gb.build(node_features, aligned_pos)
 
