@@ -44,9 +44,22 @@ class _Tee:
     def __init__(self, *streams):
         self.streams = streams
 
+    @staticmethod
+    def _safe_write(stream, data):
+        """写入单条流；控制台编码不支持时用 ? 替换，避免中断主流程。"""
+        try:
+            stream.write(data)
+        except UnicodeEncodeError:
+            encoding = getattr(stream, "encoding", None) or "utf-8"
+            stream.write(
+                data.encode(encoding, errors="replace").decode(encoding)
+            )
+        except Exception:  # noqa: BLE001 - 日志写入失败不应中断主流程
+            pass
+
     def write(self, data):
         for stream in self.streams:
-            stream.write(data)
+            self._safe_write(stream, data)
         self.flush()
 
     def flush(self):
