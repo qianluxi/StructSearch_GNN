@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *$py.class
+.pytest_cache/
 
 # 可选：补充Python项目常见忽略项（推荐）
 # 虚拟环境

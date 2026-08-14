@@ -36,8 +36,47 @@ CLASS_MAP = {
 }
 
 
-def load_retrieval_config(cfg_path=None):
-    """加载检索配置，返回 SimpleNamespace（支持 cfg.model.hidden_dim 式访问）。"""
+def _resolve_config_paths(cfg):
+    """把配置里的相对路径统一解析为相对项目根目录的绝对路径。
 
+    Args:
+        cfg: load_config 返回的 SimpleNamespace
+
+    Returns:
+        同一个 cfg 对象（相对路径字段被改写为绝对路径）。
+    """
+    relative_keys = (
+        ("data_root",),
+        ("checkpoint_dir",),
+        ("embedding_dir",),
+        ("data", "root"),
+        ("data", "processed"),
+        ("data", "splits"),
+    )
+
+    for keys in relative_keys:
+        node = cfg
+        for key in keys[:-1]:
+            node = getattr(node, key, None)
+            if node is None:
+                break
+        if node is None:
+            continue
+
+        value = getattr(node, keys[-1], None)
+        if isinstance(value, str) and not os.path.isabs(value):
+            setattr(node, keys[-1], os.path.join(ROOT_DIR, value))
+
+    return cfg
+
+
+def load_retrieval_config(cfg_path=None):
+    """加载检索配置，返回 SimpleNamespace（支持 cfg.model.hidden_dim 式访问）。
+
+    配置中的相对路径（data_root / checkpoint_dir / embedding_dir / data.*）
+    会统一解析为相对项目根目录的绝对路径，调用方不再依赖当前工作目录。
+    """
     cfg_path = cfg_path or DEFAULT_CONFIG_PATH
-    return load_config(cfg_path)
+    if not os.path.isabs(cfg_path):
+        cfg_path = os.path.join(ROOT_DIR, cfg_path)
+    return _resolve_config_paths(load_config(cfg_path))

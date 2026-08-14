@@ -31,3 +31,21 @@ def test_type_ratio_sums_to_one(dataset):
     data = dataset[0]
     raw = dataset.inverse_transform(data.graph_feature).numpy()
     np.testing.assert_allclose(raw[0] + raw[1] + raw[2], 1.0, atol=1e-5)
+
+
+def test_r_feature_log1p_transform():
+    from datasets.feature_engineering import FeatureEngineering
+
+    nodes = [{
+        "centroid": (0.0, 0.0),
+        "area": 1000.0,
+        "Lx": 10.0,
+        "Ly": 5.0,
+        "long_leg_length": 10.0,
+        "long_leg_thickness": 5.0,
+        "r": 1e8,
+        "type": 2,
+    }]
+    features, _ = FeatureEngineering().build(nodes)
+    # 第 8 维应为 log1p(r)，而不是原始 r
+    np.testing.assert_allclose(features[0, 8], float(np.log1p(1e8)), rtol=1e-6)

@@ -118,7 +118,7 @@ Type rules currently implemented in `classify_node`:
 5     L_short  (min(Lx, Ly))
 6     long_leg_length
 7     long_leg_thickness
-8     r
+8     r (log1p)
 ```
 
 ### graph_builder.py
@@ -186,10 +186,10 @@ Files whose names do not match any key are skipped.
 
 ## 3. Training (`src/training/`)
 
-- `train.py` is the runnable training entry point:
-  `StructureDataset(root="data")` -> `split_dataset(n, train_ratio=0.8)` ->
-  PyG `DataLoader` -> `GraphEncoder` + `CrossEntropyLoss` (50 epochs) ->
-  saves `checkpoints/model.pt` as `{"state_dict", "emb_dim", "num_classes"}`.
+- `train.py` is the runnable training entry point: reads `configs/retrieval.yaml`
+  (dataset root, graph params, model dims, training hyperparameters and
+  checkpoint path), trains `GraphEncoder` + `CrossEntropyLoss`, prints per-epoch
+  validation accuracy, and saves `{"state_dict", "emb_dim", "num_classes"}`.
 - `split_dataset(n_samples, train_ratio=0.8, seed=42)` returns a deterministic
   shuffled `(train_idx, val_idx)`.
 

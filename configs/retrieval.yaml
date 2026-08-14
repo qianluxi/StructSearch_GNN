@@ -2,6 +2,7 @@
 # Retrieval / Classification Training Config
 # =========================
 
+# 以下相对路径均相对项目根目录，加载时由 retrieval.config 自动解析为绝对路径。
 device: "cuda"              # 或 "cpu"，代码会自动回退到可用设备
 data_root: "data"           # StructureDataset 根目录（其下需有 raw/ 与 processed/）
 checkpoint_dir: "checkpoints"
@@ -21,6 +22,7 @@ training:
   batch_size: 8             # 与 src/training/train.py 一致
   num_epochs: 50
   learning_rate: 0.001
+  val_ratio: 0.2            # 验证集比例（train.py 切分用）
   checkpoint_dir: "checkpoints"
   model_name: "model.pt"
 

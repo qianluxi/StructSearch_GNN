@@ -118,7 +118,7 @@ class FeatureEngineering:
 
         6  long_leg_length
         7  long_leg_thickness
-        8  r
+        8  r (log1p 压缩)
         """
 
         features = []
@@ -154,13 +154,18 @@ class FeatureEngineering:
             long_leg_thickness = float(n["long_leg_thickness"])
             r = float(n["r"])
 
+            # r 动态范围极大（可到 1e8），直接标准化会被少数离群值主导，
+            # 且 float32 下无法精确反标准化；用 log1p 压缩尾部。
+            # 注意：仅压缩特征值，不影响 dxf_parser 中 classify_node 使用的物理 r。
+            r_feat = float(np.log1p(max(r, 0.0)))
+
             geom_features = np.array([
                 area,
                 L_long,
                 L_short,
                 long_leg_length,
                 long_leg_thickness,
-                r
+                r_feat
             ], dtype=float)
 
             node_feature = np.concatenate([one_hot, geom_features])
