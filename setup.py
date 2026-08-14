@@ -35,6 +35,8 @@ setup(
         "faiss-cpu>=1.7.0",
         "jupyter>=1.0.0",
         "notebook>=6.4.0",
-        "dxfgrabber>=0.8.0"
+        "ezdxf>=0.16",
+        "shapely>=1.7.0",
+        "pytest>=7.0"
     ],
 )

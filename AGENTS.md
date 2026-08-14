@@ -33,10 +33,10 @@ more than clever code.
 - Python 3.9+ (bytecode in repo built with 3.9; keep compatibility)
 - PyTorch + PyTorch Geometric (PyG)
 - NumPy, SciPy, scikit-learn
-- ezdxf + shapely (DXF parsing and geometry; `dxfgrabber` in
-  `requirements.txt` is legacy and not used by the current code)
+- ezdxf + shapely (DXF parsing and geometry)
 - matplotlib / seaborn (visualization)
 - FAISS or Milvus (optional vector backends)
+- pytest (unit tests)
 
 Avoid introducing unnecessary dependencies. When you touch dependencies,
 update `requirements.txt` and `setup.py` together.
@@ -50,27 +50,25 @@ StructSearch_v2/
   configs/            # YAML configs (retrieval.yaml is the primary one)
   src/
     datasets/         # DXF parsing, features, graph construction, dataset
-    models/           # GraphEncoder, backbones/, heads/
-    training/         # train.py, split_dataset.py, evaluate.py (+ placeholders)
-    retrieval/        # retrieval entry points (currently empty, implement here)
-    retrieval/R/      # legacy working retrieval implementation (reference)
+    models/           # GraphEncoder, backbones/ (GINBackbone)
+    training/         # train.py, split_dataset.py, evaluate.py
+    retrieval/        # config, embedder, processor, index_builder, search_engine, cli
     analysis/         # embedding metrics, retrieval benchmark, visualizations
     tools/visualize/  # t-SNE / PCA / confusion / distance matrix scripts
-    utils/            # config_loader.py, dxf_utils.py
+    utils/            # config_loader.py, run_output.py
   data/
     raw/ raw_dxf/     # original DXF drawings (never modify)
     processed/        # cached PyG graph data
     splits/ feature_index/
   tests/              # unit tests
-  visualize/          # duplicate of legacy visualization scripts
   checkpoints/        # trained model artifacts
   fig/                # generated figures (output)
   experiments/        # embeddings, logs, checkpoints (output)
 ```
 
-Follow the existing architecture. Do not create random folders. When a legacy
-and a current module overlap (e.g. `src/retrieval/R/` vs `src/retrieval/`),
-put new code in the non-legacy location and treat `R/` as a reference only.
+Follow the existing architecture. Do not create random folders. Put new code in
+the current module location (e.g. `src/retrieval/`) rather than creating
+parallel or legacy copies.
 
 ---
 
@@ -177,12 +175,13 @@ Files whose names do not match any key are skipped.
 - Keep the `(embedding, logits)` tuple contract; downstream code and tests
   rely on it.
 
-### backbones/ and heads/
+### backbones/
 
 - `GINBackbone(cfg)` reads `cfg.model.hidden_dim`, `cfg.model.num_layers`,
-  `cfg.model.num_node_features`; GCN / GraphTransformer are placeholders.
-- `ClassifierHead(in_dim, num_classes)`, `ProjectionHead(in_dim, out_dim)`
-  (projection head normalizes output for cosine similarity).
+  `cfg.model.num_node_features`; kept as an optional experimental backbone.
+  GCN / GraphTransformer placeholders and the contrastive heads
+  (`ClassifierHead` / `ProjectionHead`) were removed: the project does not
+  plan graph contrastive learning.
 - Prefer `GraphEncoder` for new work unless a backbone is explicitly required.
 
 ## 3. Training (`src/training/`)
@@ -191,14 +190,13 @@ Files whose names do not match any key are skipped.
   `StructureDataset(root="data")` -> `split_dataset(n, train_ratio=0.8)` ->
   PyG `DataLoader` -> `GraphEncoder` + `CrossEntropyLoss` (50 epochs) ->
   saves `checkpoints/model.pt` as `{"state_dict", "emb_dim", "num_classes"}`.
-- `split_dataset(n_samples, train_ratio=0.8)` returns shuffled `(train_idx, val_idx)`.
-- `pretrain.py` / `finetune.py` are placeholders; do not treat them as
-  functional unless you implement them.
+- `split_dataset(n_samples, train_ratio=0.8, seed=42)` returns a deterministic
+  shuffled `(train_idx, val_idx)`.
 
 ## 4. Retrieval (`src/retrieval/`)
 
-The top-level `src/retrieval/*.py` files are currently empty stubs. The working
-legacy implementation lives in `src/retrieval/R/` and defines the intended API:
+`src/retrieval/` implements the retrieval pipeline (config, embedder, processor,
+index_builder, search_engine, cli):
 
 - `Embedder(model, device=None)`:
   - `extract_one(data) -> (emb_dim,)` numpy
@@ -209,19 +207,20 @@ legacy implementation lives in `src/retrieval/R/` and defines the intended API:
   with stats features)
 - `SearchEngine.search(dxf_path)` -> classification result + Top-K similar cases
 - `processor.process_single_dxf(filepath)` -> model-ready PyG `Data`
-
-When implementing the stubs, mirror these interfaces so callers do not break.
+- `cli.main()` exposes `--build` / `--search` / `--benchmark` actions, with run
+  artifacts archived under `experiments/runs/`.
 
 ## 5. Analysis & Visualization (`src/analysis/`, `src/tools/visualize/`)
 
 - `embedding_metrics.evaluate_embedding(embeddings, labels)` returns
   silhouette score, Davies-Bouldin index, Calinski-Harabasz score, and
   Top-1/3/5 retrieval accuracy.
-- `retrieval_benchmark/run_benchmark.run()` produces t-SNE, similarity heatmap,
-  centroid distance, variance, retrieval accuracy curve, and case figures under
-  `fig/benchmark/`.
-- Visual scripts live in `src/tools/visualize/` (and a legacy copy in
-  `visualize/`); prefer the `src/tools/visualize/` versions for new work.
+- `retrieval_benchmark/run_benchmark.run()` produces Top-1/3/5 accuracy,
+  silhouette / DB / CH, confusion matrix, failure cases, and figures
+  (t-SNE / similarity heatmap / centroid distance / variance / accuracy
+  curve / case figures); run via `python -m src.retrieval.cli --benchmark`.
+- Visual scripts live in `src/tools/visualize/`; prefer those versions for new
+  work.
 
 ## 6. Configuration (`configs/`, `src/utils/`)
 
@@ -230,8 +229,6 @@ When implementing the stubs, mirror these interfaces so callers do not break.
 - `configs/retrieval.yaml` is the primary config: device, data roots,
   checkpoint paths, model params, embedding dim.
 - Put tunable parameters in YAML. Avoid hard-coded paths and hyperparameters.
-- `src/config.py` holds legacy module-level globals; prefer YAML config in new
-  code.
 
 ---
 
@@ -248,8 +245,7 @@ When implementing the stubs, mirror these interfaces so callers do not break.
    standardized (`x`, `graph_feature`) tensors; never feed raw tensors to the
    model by default.
 5. Extend existing classes/interfaces instead of creating parallel modules.
-   Consolidate duplicates (e.g. `src/retrieval/` vs `src/retrieval/R/`,
-   `src/tools/visualize/` vs `visualize/`) rather than adding more.
+   Consolidate duplicates rather than adding more.
 6. When a model, dataset, or config default changes, update the corresponding
    tests and configs in the same commit.
 
@@ -322,7 +318,7 @@ Models must be reproducible, deterministic when possible, and configurable.
 - Prefer small, atomic commits.
 - Suggested prefixes: `feat:`, `fix:`, `refactor:`, `docs:`, `test:`, `perf:`.
 - Branch convention follows the project history: `vX.Y` version branches
-  (currently up to `v1.8`).
+  (currently up to `v2.0`).
 - Never rewrite project history; do not force-push shared branches.
 - Commit code that runs; avoid committing large binaries (DXF datasets,
   checkpoints, figures) unless explicitly requested — use `.gitignore` /
@@ -334,15 +330,15 @@ Models must be reproducible, deterministic when possible, and configurable.
 
 When working in this repo, be aware of the following:
 
-- `main.py` imports `src.training.trainer.Trainer`, which no longer exists;
-  the runnable entry point is `src/training/train.py`.
-- `src/retrieval/*.py` are empty stubs; the legacy implementation in
-  `src/retrieval/R/` is the reference API.
-- `pretrain.py` / `finetune.py` are placeholders.
-- `requirements.txt` lists `dxfgrabber`, but the code uses `ezdxf` + `shapely`;
-  update dependencies when you touch them.
-- Some README/docs files have GBK/UTF-8 encoding issues; write new docs as
-  UTF-8.
+- `main.py` delegates to `src/training/train.py` (the runnable training entry
+  point); the retrieval CLI is `python -m src.retrieval.cli`.
+- `src/retrieval/` implements the retrieval pipeline (no stubs).
+- `pretrain.py` / `finetune.py` were removed; the project does not plan graph
+  contrastive learning.
+- Dependencies are declared in `requirements.txt` / `setup.py` (ezdxf, shapely,
+  pytest; no dxfgrabber). Keep the two files in sync.
+- Some legacy docs (snapshots/docx) have GBK/UTF-8 encoding issues; write new
+  docs as UTF-8.
 
 ---
 
