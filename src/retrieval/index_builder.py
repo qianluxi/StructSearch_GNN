@@ -100,9 +100,15 @@ def build_index(cfg_path=None):
     save_dir = cfg.embedding_dir
     os.makedirs(save_dir, exist_ok=True)
 
+    # round 到 6 位小数：消除 CUDA 浮点抖动，保证索引字节级可复现
+    embeddings_arr = np.round(
+        np.asarray(db_embeddings, dtype=np.float32),
+        6
+    )
+
     np.save(
         os.path.join(save_dir, "embeddings.npy"),
-        np.asarray(db_embeddings, dtype=np.float32)
+        embeddings_arr
     )
     np.save(
         os.path.join(save_dir, "filenames.npy"),
