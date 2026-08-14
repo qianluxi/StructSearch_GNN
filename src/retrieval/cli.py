@@ -1,4 +1,4 @@
-"""检索命令行入口：建库 / 检索。"""
+"""检索命令行入口：建库 / 检索 / 基准评估。"""
 
 import argparse
 import os
@@ -12,6 +12,7 @@ for _path in (SRC_DIR, ROOT_DIR):
 
 from retrieval.index_builder import build_index
 from retrieval.search_engine import SearchEngine
+from utils.logging_setup import setup_logging
 from utils.run_output import fig_dir, run_output
 
 
@@ -50,6 +51,14 @@ def _run_search(engine, dxf_path, topk, run_dir):
         print(f"[Run Output] 检索结果图生成失败（可忽略）: {exc}")
 
 
+def _run_benchmark(run_dir):
+    """执行检索质量基准评估，并把指标/图/失败案例归档到本次运行目录。"""
+    from analysis.retrieval_benchmark.run_benchmark import run as run_benchmark
+
+    print("\n[Benchmark] 开始检索质量基准评估...")
+    run_benchmark(save_dir=run_dir)
+
+
 def _write_result_summary(run_dir, dxf_path, result):
     """把分类与 Top-K 检索结果单独写入 result.txt，便于直接查看。"""
     lines = [
@@ -74,13 +83,20 @@ def _write_result_summary(run_dir, dxf_path, result):
 
 
 def main(argv=None):
+    setup_logging()
+
     parser = argparse.ArgumentParser(
-        description="StructSearch_v2 检索工具：构建索引或检索单张 DXF"
+        description="StructSearch_v2 检索工具：构建索引、检索单张 DXF 或运行基准评估"
     )
     parser.add_argument(
         "--build",
         action="store_true",
         help="构建特征索引（embeddings.npy 等）"
+    )
+    parser.add_argument(
+        "--benchmark",
+        action="store_true",
+        help="运行检索质量基准评估（Top-1/3/5、聚类指标、混淆矩阵、失败案例）"
     )
     parser.add_argument(
         "--search",
@@ -96,6 +112,9 @@ def main(argv=None):
         with run_output("build") as run_dir:
             build_index(args.config)
             _save_build_figures(run_dir)
+    elif args.benchmark:
+        with run_output("benchmark") as run_dir:
+            _run_benchmark(run_dir)
     elif args.search:
         with run_output("search") as run_dir:
             engine = SearchEngine(args.config)

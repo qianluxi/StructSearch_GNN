@@ -9,9 +9,12 @@ from torch_geometric.loader import DataLoader
 from datasets.structure_dataset import StructureDataset
 from models.model import GraphEncoder
 from training.split_dataset import split_dataset
+from utils.logging_setup import setup_logging
 
 
 def train():
+    setup_logging()
+
     # -------------------------
     # 加载完整数据集
     # -------------------------

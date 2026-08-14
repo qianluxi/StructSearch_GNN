@@ -1,20 +1,24 @@
-import os
-import sys
-
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.append(os.path.join(ROOT, "src"))
+"""DataLoader 批处理正确性测试。"""
 
 from torch_geometric.loader import DataLoader
-from datasets.structure_dataset import StructureDataset
 
-dataset = StructureDataset(root="data")
 
-loader = DataLoader(dataset, batch_size=4)
+def test_dataloader_batch_shapes(dataset):
+    loader = DataLoader(dataset, batch_size=4)
+    batch = next(iter(loader))
 
-for batch in loader:
+    assert batch.num_graphs <= 4
+    assert batch.x.ndim == 2
+    assert batch.x.shape[1] == 9
+    assert batch.edge_index.shape[0] == 2
+    assert batch.batch.max().item() + 1 == batch.num_graphs
 
-    print("Batch nodes:", batch.x.shape)
-    print("Batch edges:", batch.edge_index.shape)
-    print("Batch graphs:", batch.batch.max().item()+1)
 
-    break
+def test_dataloader_batch_attrs_present(dataset):
+    loader = DataLoader(dataset, batch_size=4)
+    batch = next(iter(loader))
+
+    assert batch.edge_attr.shape == (batch.edge_index.shape[1], 1)
+    assert batch.pos.shape[0] == batch.x.shape[0]
+    # 图级特征按行拼接，批内为 (num_graphs * 11,)
+    assert batch.graph_feature.numel() == batch.num_graphs * 11

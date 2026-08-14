@@ -1,8 +1,12 @@
 import os
 import math
+import logging
 import ezdxf
 from shapely.geometry import Polygon
 from shapely.affinity import rotate
+
+
+logger = logging.getLogger(__name__)
 
 
 # ==========================================
@@ -23,7 +27,7 @@ def load_polygons_from_dxf(path, close_threshold=1.0):  # 1mm 以内就认为闭
     skipped_count = 0
     force_closed_count = 0  # 强制闭合计数
 
-    print(f"\n===== 开始解析 DXF: {path} =====")
+    logger.info("开始解析 DXF: %s", path)
 
     for entity in msp:
         if entity.dxftype() == "LWPOLYLINE":
@@ -34,7 +38,7 @@ def load_polygons_from_dxf(path, close_threshold=1.0):  # 1mm 以内就认为闭
             # 点数太少不能构成多边形
             if num_pts < 3:
                 skipped_count += 1
-                print(f"❌  跳过：点数不足 {num_pts}")
+                logger.debug("跳过：点数不足 %s", num_pts)
                 continue
 
             # --------------------------
@@ -43,7 +47,7 @@ def load_polygons_from_dxf(path, close_threshold=1.0):  # 1mm 以内就认为闭
             if entity.closed:
                 closed_count += 1
                 polygons.append(Polygon(pts))
-                print(f"✅  正常闭合多边形，点数: {num_pts}")
+                logger.debug("正常闭合多边形，点数: %s", num_pts)
             else:
                 # --------------------------
                 # 新增：强制判断近似闭合
@@ -55,17 +59,17 @@ def load_polygons_from_dxf(path, close_threshold=1.0):  # 1mm 以内就认为闭
                 if dist < close_threshold:
                     force_closed_count += 1
                     polygons.append(Polygon(pts))
-                    print(f"✅  强制闭合（距离差={dist:.2f}），点数: {num_pts}")
+                    logger.debug("强制闭合（距离差=%.2f），点数: %s", dist, num_pts)
                 else:
                     skipped_count += 1
-                    print(f"❌  跳过不闭合（距离差={dist:.2f}），点数: {num_pts}")
+                    logger.debug("跳过不闭合（距离差=%.2f），点数: %s", dist, num_pts)
 
-    print(f"\n===== 解析结果汇总 =====")
-    print(f"总 LWPOLYLINE: {total_polyline}")
-    print(f"正常闭合: {closed_count}")
-    print(f"强制闭合(修复): {force_closed_count}")
-    print(f"跳过: {skipped_count}")
-    print(f"最终 polygons: {len(polygons)}")
+    logger.info(
+        "解析结果汇总: 总 LWPOLYLINE=%s, 正常闭合=%s, 强制闭合=%s, "
+        "跳过=%s, 最终 polygons=%s",
+        total_polyline, closed_count, force_closed_count,
+        skipped_count, len(polygons),
+    )
 
     return polygons
 
@@ -212,16 +216,14 @@ def merge_parallel_edges(edges, direction, tol=1):
     return merged
 
 def compute_r_from_long_leg(polygon, Lx, Ly, tol=1e-6, debug=True):
-    
+
     if debug:
-        print("\n==============================")
-        print("开始计算 r")
-        print(f"Lx = {Lx}, Ly = {Ly}")
+        logger.debug("开始计算 r: Lx=%s, Ly=%s", Lx, Ly)
 
     edges = extract_edges(polygon)
 
     if debug:
-        print(f"总边数: {len(edges)}")
+        logger.debug("总边数: %s", len(edges))
 
     if Lx >= Ly:
         span = Lx
@@ -231,26 +233,23 @@ def compute_r_from_long_leg(polygon, Lx, Ly, tol=1e-6, debug=True):
         direction = "vertical"
 
     if debug:
-        print(f"判定主方向: {direction}, span = {span}")
+        logger.debug("判定主方向: %s, span = %s", direction, span)
 
     merged_lines = merge_parallel_edges(edges, direction, tol)
 
     if debug:
-        print(f"合并后平行线数量: {len(merged_lines)}")
+        logger.debug("合并后平行线数量: %s", len(merged_lines))
 
     if len(merged_lines) < 2:
         if debug:
-            print("⚠ 平行线不足2条，返回0")
+            logger.debug("平行线不足2条，返回0")
         return 0.0, 0.0
 
     merged_lines.sort(key=lambda x: x["length"], reverse=True)
 
     if debug:
-        print("---- 合并线列表 ----")
         for i, line in enumerate(merged_lines):
-            print(f"{i}: pos={line['pos']}, len={line['length']}")
-
-        print("---- 开始边对匹配 ----")
+            logger.debug("合并线 %s: pos=%s, len=%s", i, line["pos"], line["length"])
 
     best_thickness = None
     best_r = 0.0
@@ -262,11 +261,11 @@ def compute_r_from_long_leg(polygon, Lx, Ly, tol=1e-6, debug=True):
             line2 = merged_lines[j]
 
             if debug:
-                print(f"\n检查边对 ({i},{j})")
+                logger.debug("检查边对 (%s,%s)", i, j)
 
             if abs(line1["pos"] - line2["pos"]) < tol:
                 if debug:
-                    print("  跳过：共线")
+                    logger.debug("  跳过：共线")
                 continue
 
             overlap_min = max(line1["min"], line2["min"])
@@ -277,47 +276,46 @@ def compute_r_from_long_leg(polygon, Lx, Ly, tol=1e-6, debug=True):
             overlap_ratio = overlap / min_len if min_len > 0 else 0
 
             if debug:
-                print(f"  overlap = {overlap}")
-                print(f"  overlap_ratio = {overlap_ratio}")
+                logger.debug("  overlap = %s", overlap)
+                logger.debug("  overlap_ratio = %s", overlap_ratio)
 
             if overlap < 0.3 * min_len:
                 if debug:
-                    print("  跳过：重叠不足30%")
+                    logger.debug("  跳过：重叠不足30%")
                 continue
 
             thickness = abs(line1["pos"] - line2["pos"])
 
             if debug:
-                print(f"  thickness = {thickness}")
+                logger.debug("  thickness = %s", thickness)
 
             if thickness <= tol:
                 if debug:
-                    print("  跳过：厚度小于tol")
+                    logger.debug("  跳过：厚度小于tol")
                 continue
 
             if thickness >= span:
                 if debug:
-                    print("  跳过：厚度>=span")
+                    logger.debug("  跳过：厚度>=span")
                 continue
 
             if debug:
-                print("  ✔ 有效厚度候选")
+                logger.debug("  有效厚度候选")
 
             if best_thickness is None or thickness < best_thickness:
                 best_thickness = thickness
                 best_r = span / thickness
 
                 if debug:
-                    print(f"  更新最佳厚度: {best_thickness}, r={best_r}")
+                    logger.debug("  更新最佳厚度: %s, r=%s", best_thickness, best_r)
 
     if best_thickness is not None:
         if debug:
-            print("最终选择厚度:", best_thickness)
-            print("最终 r:", best_r)
+            logger.debug("最终选择厚度: %s, 最终 r: %s", best_thickness, best_r)
         return best_r, best_thickness
     else:
         if debug:
-            print("⚠ 没有找到有效厚度")
+            logger.debug("没有找到有效厚度")
         return 0.0, 0.0
 # ==========================================
 # 分类（修改后）

@@ -1,4 +1,5 @@
 import os
+import logging
 import torch
 import numpy as np
 from torch_geometric.data import Data, InMemoryDataset
@@ -7,6 +8,9 @@ from datasets.dxf_parser import process_dxf_file
 from datasets.feature_engineering import FeatureEngineering
 from datasets.graph_builder import GraphBuilder
 from datasets.graph_statistics import GraphStatistics
+
+
+logger = logging.getLogger(__name__)
 
 
 class StructureDataset(InMemoryDataset):
@@ -132,7 +136,7 @@ class StructureDataset(InMemoryDataset):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
-        print(f"\n[Dataset Seed] seed={seed}")
+        logger.info("[Dataset Seed] seed=%s", seed)
 
         data_list = []
         graph_features_list = []
@@ -164,7 +168,7 @@ class StructureDataset(InMemoryDataset):
             try:
                 nodes = process_dxf_file(file_path)
             except Exception as e:
-                print(f"[DXF ERROR] {filename} : {e}")
+                logger.warning("[DXF ERROR] %s : %s", filename, e)
                 continue
 
             if len(nodes) == 0:
@@ -233,9 +237,8 @@ class StructureDataset(InMemoryDataset):
                 dtype=torch.float
             )
 
-        print("\n[Node Feature Normalization]")
-        print("Mean:\n", np.round(node_mean, 4))
-        print("Std:\n", np.round(node_std, 4))
+        logger.info("[Node Feature Normalization] Mean=%s Std=%s",
+                    np.round(node_mean, 4), np.round(node_std, 4))
 
         # -------------------------------------------------------
         # ⭐ Graph Feature 标准化
@@ -261,9 +264,8 @@ class StructureDataset(InMemoryDataset):
                 dtype=torch.float
             )
 
-        print("\n[Graph Feature Normalization]")
-        print("Mean:\n", np.round(mean, 4))
-        print("Std:\n", np.round(std, 4))
+        logger.info("[Graph Feature Normalization] Mean=%s Std=%s",
+                    np.round(mean, 4), np.round(std, 4))
 
         # -------------------------------------------------------
 

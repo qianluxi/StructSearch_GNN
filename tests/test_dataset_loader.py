@@ -1,19 +1,27 @@
-import os
-import sys
+"""StructureDataset 加载与字段维度测试。"""
 
-ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-sys.path.append(os.path.join(ROOT, "src"))
 
-from datasets.structure_dataset import StructureDataset
+def test_dataset_nonempty(dataset):
+    assert len(dataset) > 0
 
-dataset = StructureDataset(root="data")
 
-print("Dataset size:", len(dataset))
+def test_data_fields_shapes(dataset):
+    data = dataset[0]
 
-data = dataset[0]
+    n = data.x.shape[0]
+    assert data.x.shape == (n, 9)
+    assert data.pos.shape == (n, 2)
+    assert data.edge_index.shape[0] == 2
+    assert data.edge_attr.shape == (data.edge_index.shape[1], 1)
+    assert data.graph_feature.shape == (11,)
+    assert data.graph_feature_raw.shape == (11,)
+    assert data.y.numel() == 1
+    assert data.y.item() in (0, 1, 2)
+    assert data.filename.endswith(".dxf")
 
-print("Nodes:", data.x.shape)
-print("Edges:", data.edge_index.shape)
-print("Edge attr:", data.edge_attr.shape)
-print("Graph feature:", data.graph_feature.shape)
-print("Position:", data.pos.shape)
+
+def test_every_sample_valid(dataset):
+    for i in range(len(dataset)):
+        data = dataset[i]
+        assert data.x.shape[0] == data.pos.shape[0] > 0
+        assert data.y.item() in (0, 1, 2)

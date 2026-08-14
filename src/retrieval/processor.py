@@ -6,6 +6,7 @@ DXF -> process_dxf_file -> FeatureEngineering -> GraphBuilder -> GraphStatistics
 
 import os
 import sys
+import logging
 
 ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 SRC_DIR = os.path.join(ROOT_DIR, "src")
@@ -20,6 +21,9 @@ from datasets.dxf_parser import process_dxf_file
 from datasets.feature_engineering import FeatureEngineering
 from datasets.graph_builder import GraphBuilder
 from datasets.graph_statistics import GraphStatistics
+
+
+logger = logging.getLogger(__name__)
 
 
 def process_single_dxf(filepath, k=6, connect_mode="knn", radius=None):
@@ -43,11 +47,11 @@ def process_single_dxf(filepath, k=6, connect_mode="knn", radius=None):
     try:
         nodes = process_dxf_file(filepath)
     except Exception as exc:  # noqa: BLE001 - 单文件解析失败不应中断检索
-        print(f"[DXF ERROR] {os.path.basename(filepath)}: {exc}")
+        logger.warning("[DXF ERROR] %s: %s", os.path.basename(filepath), exc)
         return None
 
     if not nodes:
-        print(f"[DXF WARN] {os.path.basename(filepath)}: 未解析到构件节点")
+        logger.warning("[DXF WARN] %s: 未解析到构件节点", os.path.basename(filepath))
         return None
 
     node_features, aligned_pos = FeatureEngineering().build(nodes)
