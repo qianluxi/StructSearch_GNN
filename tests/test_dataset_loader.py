@@ -25,3 +25,14 @@ def test_every_sample_valid(dataset):
         data = dataset[i]
         assert data.x.shape[0] == data.pos.shape[0] > 0
         assert data.y.item() in (0, 1, 2)
+
+
+def test_cache_manifest_matches_raw(dataset):
+    """processed 缓存应记录 raw 清单与管线指纹，且与当前状态一致。"""
+    import torch
+
+    loaded = torch.load(dataset.processed_paths[0])
+    assert "raw_manifest" in loaded
+    assert loaded["raw_manifest"] == dataset._raw_manifest()
+    assert "pipeline_fingerprint" in loaded
+    assert loaded["pipeline_fingerprint"] == dataset._pipeline_fingerprint()

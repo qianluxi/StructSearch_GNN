@@ -9,6 +9,31 @@ from shapely.affinity import rotate
 logger = logging.getLogger(__name__)
 
 
+def _expand_insert(insert, depth=0):
+    """展开 INSERT 块引用，返回其中的 LWPOLYLINE 实体（含嵌套块）。
+
+    ezdxf 的 virtual_entities() 会把块内实体按插入变换到模型空间坐标；
+    嵌套 INSERT 最多递归 4 层，防止异常文件造成死循环。
+    """
+    if depth >= 4:
+        return []
+
+    result = []
+    block_name = getattr(insert.dxf, "name", "?")
+    try:
+        virtual = insert.virtual_entities()
+    except Exception:  # noqa: BLE001 - 单个块展开失败不应中断解析
+        logger.warning("展开 INSERT 失败（块 %s），跳过", block_name)
+        return result
+
+    for entity in virtual:
+        if entity.dxftype() == "LWPOLYLINE":
+            result.append(entity)
+        elif entity.dxftype() == "INSERT":
+            result.extend(_expand_insert(entity, depth + 1))
+    return result
+
+
 # ==========================================
 # 读取 DXF
 # ==========================================
@@ -29,40 +54,52 @@ def load_polygons_from_dxf(path, close_threshold=1.0):  # 1mm 以内就认为闭
 
     logger.info("开始解析 DXF: %s", path)
 
+    polyline_entities = []
     for entity in msp:
         if entity.dxftype() == "LWPOLYLINE":
-            total_polyline += 1
-            pts = [(p[0], p[1]) for p in entity]
-            num_pts = len(pts)
+            polyline_entities.append(entity)
+        elif entity.dxftype() == "INSERT":
+            expanded = _expand_insert(entity)
+            logger.debug(
+                "展开 INSERT 块 %s，新增 %s 个 LWPOLYLINE",
+                getattr(entity.dxf, "name", "?"),
+                len(expanded),
+            )
+            polyline_entities.extend(expanded)
 
-            # 点数太少不能构成多边形
-            if num_pts < 3:
-                skipped_count += 1
-                logger.debug("跳过：点数不足 %s", num_pts)
-                continue
+    for entity in polyline_entities:
+        total_polyline += 1
+        pts = [(p[0], p[1]) for p in entity]
+        num_pts = len(pts)
 
+        # 点数太少不能构成多边形
+        if num_pts < 3:
+            skipped_count += 1
+            logger.debug("跳过：点数不足 %s", num_pts)
+            continue
+
+        # --------------------------
+        # 原来的判断
+        # --------------------------
+        if entity.closed:
+            closed_count += 1
+            polygons.append(Polygon(pts))
+            logger.debug("正常闭合多边形，点数: %s", num_pts)
+        else:
             # --------------------------
-            # 原来的判断
+            # 新增：强制判断近似闭合
             # --------------------------
-            if entity.closed:
-                closed_count += 1
+            p_start = np.array(pts[0])
+            p_end = np.array(pts[-1])
+            dist = np.linalg.norm(p_start - p_end)  # 起点终点距离
+
+            if dist < close_threshold:
+                force_closed_count += 1
                 polygons.append(Polygon(pts))
-                logger.debug("正常闭合多边形，点数: %s", num_pts)
+                logger.debug("强制闭合（距离差=%.2f），点数: %s", dist, num_pts)
             else:
-                # --------------------------
-                # 新增：强制判断近似闭合
-                # --------------------------
-                p_start = np.array(pts[0])
-                p_end = np.array(pts[-1])
-                dist = np.linalg.norm(p_start - p_end)  # 起点终点距离
-
-                if dist < close_threshold:
-                    force_closed_count += 1
-                    polygons.append(Polygon(pts))
-                    logger.debug("强制闭合（距离差=%.2f），点数: %s", dist, num_pts)
-                else:
-                    skipped_count += 1
-                    logger.debug("跳过不闭合（距离差=%.2f），点数: %s", dist, num_pts)
+                skipped_count += 1
+                logger.debug("跳过不闭合（距离差=%.2f），点数: %s", dist, num_pts)
 
     logger.info(
         "解析结果汇总: 总 LWPOLYLINE=%s, 正常闭合=%s, 强制闭合=%s, "

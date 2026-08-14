@@ -12,6 +12,14 @@ from datasets.graph_statistics import GraphStatistics
 
 logger = logging.getLogger(__name__)
 
+_PIPELINE_FILES = (
+    "dxf_parser.py",
+    "feature_engineering.py",
+    "graph_builder.py",
+    "graph_statistics.py",
+    "structure_dataset.py",
+)
+
 
 class StructureDataset(InMemoryDataset):
 
@@ -41,6 +49,13 @@ class StructureDataset(InMemoryDataset):
         if os.path.exists(self.processed_paths[0]):
 
             loaded = torch.load(self.processed_paths[0])
+
+            if not self._cache_up_to_date(loaded):
+                logger.info(
+                    "[StructureDataset] raw 目录已变化，自动重建 processed 缓存 ..."
+                )
+                self.process()
+                loaded = torch.load(self.processed_paths[0])
 
             self.data = loaded["data"]
             self.slices = loaded["slices"]
@@ -77,6 +92,47 @@ class StructureDataset(InMemoryDataset):
             name += f'_r{self.radius}'
 
         return [name + '.pt']
+
+    # -------------------------------------------------------
+    # 缓存失效检查
+    # -------------------------------------------------------
+    def _raw_manifest(self):
+        """返回当前 raw 目录文件清单（名称、大小、修改时间），用于缓存失效判断。"""
+        manifest = []
+        for name in self.raw_file_names:
+            path = os.path.join(self.raw_dir, name)
+            try:
+                stat = os.stat(path)
+                manifest.append((name, stat.st_size, stat.st_mtime_ns))
+            except OSError:
+                manifest.append((name, -1, -1))
+        return sorted(manifest)
+
+    def _cache_up_to_date(self, loaded):
+        """判断已保存的缓存是否仍有效。
+
+        Args:
+            loaded: 从 processed 文件加载的 dict
+
+        Returns:
+            raw 文件清单（名称/大小/时间）或数据管线源码指纹任一变化，
+            都视为缓存过期；旧缓存缺少对应字段时返回 False。
+        """
+        return (
+            loaded.get("raw_manifest") == self._raw_manifest()
+            and loaded.get("pipeline_fingerprint") == self._pipeline_fingerprint()
+        )
+
+    def _pipeline_fingerprint(self):
+        """对数据管线源码做哈希，管线代码变化时缓存自动失效。"""
+        import hashlib
+
+        digest = hashlib.md5()
+        base = os.path.dirname(os.path.abspath(__file__))
+        for name in _PIPELINE_FILES:
+            with open(os.path.join(base, name), "rb") as f:
+                digest.update(f.read())
+        return digest.hexdigest()
 
     # -------------------------------------------------------
     # 图级特征反标准化
@@ -280,7 +336,10 @@ class StructureDataset(InMemoryDataset):
                 "graph_std": std,
 
                 "node_mean": node_mean,
-                "node_std": node_std
+                "node_std": node_std,
+
+                "raw_manifest": self._raw_manifest(),
+                "pipeline_fingerprint": self._pipeline_fingerprint(),
             },
             self.processed_paths[0]
         )

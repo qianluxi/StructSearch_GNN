@@ -154,7 +154,13 @@ Type rules currently implemented in `classify_node`:
 - Standardization stats are saved with the processed file; use
   `inverse_transform(normalized_tensor)` / `inverse_node_transform(...)` to
   recover raw values. Keep the saved dict keys stable
-  (`data`, `slices`, `graph_mean`, `graph_std`, `node_mean`, `node_std`).
+  (`data`, `slices`, `graph_mean`, `graph_std`, `node_mean`, `node_std`,
+  `raw_manifest`).
+- The processed cache records a `raw_manifest` (raw file name / size / mtime);
+  and a `pipeline_fingerprint` (hash of the data-pipeline source files). When
+  `raw/` changes or the pipeline code changes, the cache is automatically
+  rebuilt on next load, so adding DXF files or editing the pipeline no longer
+  requires manual cache deletion.
 - Labels are derived from the filename via the class map:
 
 ```python
