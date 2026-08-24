@@ -59,6 +59,45 @@ def _run_benchmark(run_dir):
     run_benchmark(save_dir=run_dir)
 
 
+def _run_intra_benchmark(run_dir):
+    """执行 Stage 2 类内相似检索基准（三路线对比）。"""
+    from analysis.intra_type_benchmark import run as run_intra
+
+    print("\n[Intra-Type Benchmark] 开始类内相似检索基准评估...")
+    run_intra(save_dir=run_dir)
+
+
+def _run_expert_benchmark(run_dir):
+    """执行 Benchmark C 专家检索基准（需先填写 expert_similarity.csv）。"""
+    from benchmark.expert_retrieval import run as run_expert
+
+    print("\n[Expert Benchmark] 开始专家结构相似性检索评估...")
+    run_expert(save_dir=run_dir)
+
+
+def _write_intra_result_summary(run_dir, dxf_path, result):
+    """把两阶段检索结果写入 result.txt。"""
+    lines = [
+        f"查询文件: {dxf_path}",
+        "",
+        f"【结构类型】: {result['type']} "
+        f"(type_id={result['type_id']}, 置信度 {result['confidence']:.2%})",
+        "",
+        f"【检索方法】: {result['method']}",
+        "",
+        f"【类内最相似案例 Top {len(result['results'])}】",
+    ]
+    for item in result["results"]:
+        lines.append(f"{item['rank']}. {item['filename']}")
+        lines.append(f"   - 相似度: {item['score']:.4f}")
+        lines.append("-" * 30)
+
+    summary_path = os.path.join(run_dir, "result.txt")
+    with open(summary_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines) + "\n")
+    print(f"[Run Output] 两阶段检索结果摘要已保存: {summary_path}")
+
+
 def _write_result_summary(run_dir, dxf_path, result):
     """把分类与 Top-K 检索结果单独写入 result.txt，便于直接查看。"""
     lines = [
@@ -86,7 +125,7 @@ def main(argv=None):
     setup_logging()
 
     parser = argparse.ArgumentParser(
-        description="StructSearch_v2 检索工具：构建索引、检索单张 DXF 或运行基准评估"
+        description="StructSearch_v2 检索工具：建库 / 类型识别 / 检索 / 基准评估"
     )
     parser.add_argument(
         "--build",
@@ -99,12 +138,39 @@ def main(argv=None):
         help="运行检索质量基准评估（Top-1/3/5、聚类指标、混淆矩阵、失败案例）"
     )
     parser.add_argument(
+        "--intra-benchmark",
+        action="store_true",
+        help="运行 Stage 2 类内相似检索基准（Statistics/GNN/Hybrid 三路线对比）"
+    )
+    parser.add_argument(
+        "--expert-benchmark",
+        action="store_true",
+        help="运行 Benchmark C 专家检索基准（需先填写 data/benchmark/expert_similarity.csv）"
+    )
+    parser.add_argument(
+        "--predict",
+        type=str,
+        help="对指定 DXF 做结构类型识别（仅 11D 统计特征，无 GNN）"
+    )
+    parser.add_argument(
         "--search",
         type=str,
-        help="对指定 DXF 文件进行分类 + Top-K 检索"
+        help="对指定 DXF 文件检索相似案例"
     )
     parser.add_argument("--config", type=str, default=None)
     parser.add_argument("--topk", type=int, default=None)
+    parser.add_argument(
+        "--method",
+        type=str,
+        default=None,
+        choices=["statistics", "gnn", "hybrid"],
+        help="类内检索方法（配合 --intra-type 使用）"
+    )
+    parser.add_argument(
+        "--intra-type",
+        action="store_true",
+        help="使用两阶段流水线：先判结构类型，再在类型内检索"
+    )
 
     args = parser.parse_args(argv)
 
@@ -115,10 +181,38 @@ def main(argv=None):
     elif args.benchmark:
         with run_output("benchmark") as run_dir:
             _run_benchmark(run_dir)
+    elif args.intra_benchmark:
+        with run_output("intra_benchmark") as run_dir:
+            _run_intra_benchmark(run_dir)
+    elif args.expert_benchmark:
+        with run_output("expert_benchmark") as run_dir:
+            _run_expert_benchmark(run_dir)
+    elif args.predict:
+        with run_output("predict") as run_dir:
+            from classification.classifier import StructureTypeClassifier
+
+            result = StructureTypeClassifier(args.config).predict_dxf(args.predict)
+            if result is None:
+                print("解析失败或未提取到构件节点")
+            else:
+                print(f"结构类型: {result['type']} (type_id={result['type_id']})")
+                print(f"置信度  : {result['confidence']:.2%}")
     elif args.search:
         with run_output("search") as run_dir:
-            engine = SearchEngine(args.config)
-            _run_search(engine, args.search, args.topk, run_dir)
+            if args.intra_type:
+                from pipeline.search_pipeline import SearchPipeline
+
+                pipe = SearchPipeline(args.config)
+                result = pipe.search(
+                    args.search,
+                    topk=args.topk,
+                    method=args.method or "hybrid",
+                )
+                if result is not None:
+                    _write_intra_result_summary(run_dir, args.search, result)
+            else:
+                engine = SearchEngine(args.config)
+                _run_search(engine, args.search, args.topk, run_dir)
     else:
         parser.print_help()
 

@@ -99,6 +99,94 @@ class SearchEngine:
         return embeddings, filenames, labels
 
     # -------------------------------------------------------
+    def _route_slice(self, method):
+        """按检索路线返回索引向量的列切片。
+
+        Args:
+            method: "statistics" / "gnn" / "hybrid"
+        """
+        dim = self.cfg.embedding.dim
+        method = (method or "hybrid").lower()
+        if method == "statistics":
+            return slice(dim, None)
+        if method == "gnn":
+            return slice(0, dim)
+        if method == "hybrid":
+            return slice(None, None)
+        raise ValueError(f"未知检索方法: {method}，可选 statistics/gnn/hybrid")
+
+    # -------------------------------------------------------
+    def _query_vector(self, data, method):
+        """按检索路线构造查询向量（statistics 不需要模型前向）。"""
+        stats_vec = data.graph_feature.cpu().numpy().ravel()
+
+        if method == "statistics":
+            return stats_vec
+
+        batch = torch.zeros(
+            data.num_nodes,
+            dtype=torch.long,
+            device=self.device,
+        )
+        embedding, _ = self.model(data.x, data.edge_index, batch)
+        gnn_vec = embedding.squeeze(0).cpu().numpy()
+
+        if method == "gnn":
+            return gnn_vec
+        return np.concatenate([gnn_vec, stats_vec])  # hybrid
+
+    # -------------------------------------------------------
+    @torch.no_grad()
+    def search_by_type(self, data, type_id, topk=5, method="hybrid"):
+        """Stage 2：在指定结构类型内检索最相似案例。
+
+        Args:
+            data: 已标准化的查询 Data（可由 StructureTypeClassifier.predict 提供）
+            type_id: 结构类型 0/1/2，检索只在该类型内进行
+            topk: 返回相似案例数
+            method: "statistics" / "gnn" / "hybrid"
+
+        Returns:
+            dict：query / type / type_id / method / results
+        """
+        method = (method or "hybrid").lower()
+        cols = self._route_slice(method)
+        db_vectors = np.asarray(self.db_embeddings)[:, cols]
+        query_vec = self._query_vector(data, method)
+
+        db_labels = np.asarray(self.db_labels)
+        mask = db_labels == int(type_id)
+        query_name = os.path.basename(getattr(data, "filename", "") or "")
+
+        sims = _cosine_similarity(query_vec, db_vectors)
+        sims[~mask] = -np.inf
+        if query_name:
+            sims[np.asarray(self.db_filenames) == query_name] = -np.inf
+
+        sorted_indices = np.argsort(sims)[::-1]
+
+        results = []
+        for idx in sorted_indices:
+            if len(results) >= topk:
+                break
+            if not np.isfinite(sims[idx]):
+                continue
+            results.append({
+                "rank": len(results) + 1,
+                "filename": self.db_filenames[idx],
+                "score": float(sims[idx]),
+                "label": CLASS_NAMES.get(int(db_labels[idx]), "未知"),
+            })
+
+        return {
+            "query": query_name,
+            "type": CLASS_NAMES.get(int(type_id), "未知"),
+            "type_id": int(type_id),
+            "method": method,
+            "results": results,
+        }
+
+    # -------------------------------------------------------
     @torch.no_grad()
     def search(self, dxf_path, topk=None):
         """对单个 DXF 文件进行结构体系分类并检索最相似的历史案例。

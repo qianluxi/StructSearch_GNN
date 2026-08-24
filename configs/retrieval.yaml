@@ -18,9 +18,13 @@ graph:
   k: 6                      # KNN 邻居数，必须与 processed 缓存一致
   connect_mode: "knn"       # knn 或 radius
 
+classification:
+  method: "statistics"      # Stage 1 结构类型识别只用统计特征（无 GNN）
+  neighbor_k: 3             # 置信度参考的最近邻数
+
 training:
   batch_size: 8             # 与 src/training/train.py 一致
-  num_epochs: 50
+  num_epochs: 100
   learning_rate: 0.001
   val_ratio: 0.2            # 验证集比例（train.py 切分用）
   checkpoint_dir: "checkpoints"
@@ -28,7 +32,7 @@ training:
 
 model:
   backbone: "graph_encoder" # GraphEncoder (SAGEConv x3)
-  hidden_dim: 64
+  hidden_dim: 128
   num_layers: 3
   num_classes: 3            # 0=剪力墙 1=框剪 2=框架
   num_node_features: 9      # 节点特征维度（见 AGENTS.md）
@@ -38,3 +42,4 @@ embedding:
 
 retrieval:
   topk: 5                   # 默认返回 Top-K 相似案例
+  methods: ["statistics", "gnn", "hybrid"]   # Stage 2 类内检索对比路线

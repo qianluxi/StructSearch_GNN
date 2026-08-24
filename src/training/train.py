@@ -24,6 +24,11 @@ def train(cfg_path=None):
 
     cfg = load_retrieval_config(cfg_path)
 
+    # 固定模型初始化种子，保证训练可复现
+    torch.manual_seed(42)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(42)
+
     # -------------------------
     # 加载完整数据集
     # -------------------------
@@ -71,8 +76,12 @@ def train(cfg_path=None):
     model.to(device)
 
     # -------------------------
-    # 训练循环
+    # 训练循环（跟踪验证集最优模型）
     # -------------------------
+    best_val_acc = 0.0
+    best_epoch = 0
+    best_state = None
+
     for epoch in range(cfg.training.num_epochs):
         model.train()
         total_loss = 0
@@ -127,22 +136,40 @@ def train(cfg_path=None):
         val_acc = val_correct / val_total if val_total > 0 else 0.0
         print(f"Epoch {epoch} loss {total_loss:.6f} val_acc {val_acc:.4f}")
 
+        if val_acc > best_val_acc:
+            best_val_acc = val_acc
+            best_epoch = epoch
+            best_state = {
+                key: value.detach().cpu().clone()
+                for key, value in model.state_dict().items()
+            }
+
     # -------------------------
-    # 保存模型（路径来自配置，已解析为绝对路径）
+    # 保存验证集最优模型（路径来自配置，已解析为绝对路径）
     # -------------------------
+    if best_state is None:
+        best_state = {
+            key: value.detach().cpu().clone()
+            for key, value in model.state_dict().items()
+        }
+
     save_dir = cfg.checkpoint_dir
     os.makedirs(save_dir, exist_ok=True)
     save_path = os.path.join(save_dir, cfg.training.model_name)
 
     torch.save(
         {
-            'state_dict': model.state_dict(),
+            'state_dict': best_state,
             'emb_dim': model.lin.out_features,
+            'hidden_dim': cfg.model.hidden_dim,
             'num_classes': num_classes
         },
         save_path
     )
-    print(f"Model saved to '{save_path}'")
+    print(
+        f"Best val_acc {best_val_acc:.4f} (epoch {best_epoch}); "
+        f"model saved to '{save_path}'"
+    )
 
 
 if __name__ == "__main__":

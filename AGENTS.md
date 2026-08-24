@@ -52,6 +52,8 @@ StructSearch_v2/
     datasets/         # DXF parsing, features, graph construction, dataset
     models/           # GraphEncoder, backbones/ (GINBackbone)
     training/         # train.py, split_dataset.py, evaluate.py
+    classification/   # Stage 1: 11D 统计特征结构类型识别（无 GNN）
+    pipeline/         # 两阶段检索流水线编排
     retrieval/        # config, embedder, processor, index_builder, search_engine, cli
     analysis/         # embedding metrics, retrieval benchmark, visualizations
     tools/visualize/  # t-SNE / PCA / confusion / distance matrix scripts
@@ -195,7 +197,8 @@ Files whose names do not match any key are skipped.
 - `train.py` is the runnable training entry point: reads `configs/retrieval.yaml`
   (dataset root, graph params, model dims, training hyperparameters and
   checkpoint path), trains `GraphEncoder` + `CrossEntropyLoss`, prints per-epoch
-  validation accuracy, and saves `{"state_dict", "emb_dim", "num_classes"}`.
+  validation accuracy, and saves the best validation checkpoint as
+  `{"state_dict", "emb_dim", "num_classes"}`.
 - `split_dataset(n_samples, train_ratio=0.8, seed=42)` returns a deterministic
   shuffled `(train_idx, val_idx)`.
 
@@ -215,6 +218,14 @@ index_builder, search_engine, cli):
 - `processor.process_single_dxf(filepath)` -> model-ready PyG `Data`
 - `cli.main()` exposes `--build` / `--search` / `--benchmark` actions, with run
   artifacts archived under `experiments/runs/`.
+
+The system is split into two stages:
+- Stage 1 (`src/classification/`): structure-type recognition from the 11D
+  statistics only (`StructureTypeClassifier`), no GNN involved.
+- Stage 2 (`src/pipeline/` + `search_engine.search_by_type`): after type
+  filtering, compare similarity routes `statistics` / `gnn` / `hybrid`
+  (`src/analysis/intra_type_benchmark.py` evaluates MRR / NDCG@5 / Recall@5
+  within type).
 
 ## 5. Analysis & Visualization (`src/analysis/`, `src/tools/visualize/`)
 

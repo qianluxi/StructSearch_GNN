@@ -44,7 +44,11 @@ def load_model(model_path=None, device=None):
 
     checkpoint = torch.load(model_path, map_location=device)
 
-    model = GraphEncoder(num_classes=checkpoint["num_classes"])
+    model = GraphEncoder(
+        hidden_dim=checkpoint.get("hidden_dim", 64),
+        emb_dim=checkpoint["emb_dim"],
+        num_classes=checkpoint["num_classes"],
+    )
     model.load_state_dict(checkpoint["state_dict"])
     model.to(device)
     model.eval()
