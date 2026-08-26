@@ -67,12 +67,20 @@ def _run_intra_benchmark(run_dir):
     run_intra(save_dir=run_dir)
 
 
-def _run_expert_benchmark(run_dir):
+def _run_expert_benchmark(run_dir, exclude_queries=None):
     """执行 Benchmark C 专家检索基准（需先填写 expert_similarity.csv）。"""
     from benchmark.expert_retrieval import run as run_expert
 
     print("\n[Expert Benchmark] 开始专家结构相似性检索评估...")
-    run_expert(save_dir=run_dir)
+    run_expert(save_dir=run_dir, exclude_queries=exclude_queries)
+
+
+def _run_topk_benchmark(run_dir):
+    """执行 Benchmark C v2：Top-K 候选集评估（需先填写 expert_similarity_top3.csv）。"""
+    from benchmark.topk_retrieval import run as run_topk
+
+    print("\n[TopK Benchmark] 开始 Top-K 候选集评估...")
+    run_topk(save_dir=run_dir)
 
 
 def _write_intra_result_summary(run_dir, dxf_path, result):
@@ -148,6 +156,17 @@ def main(argv=None):
         help="运行 Benchmark C 专家检索基准（需先填写 data/benchmark/expert_similarity.csv）"
     )
     parser.add_argument(
+        "--topk-benchmark",
+        action="store_true",
+        help="运行 Benchmark C v2：Top-K 候选集评估（需先填写 expert_similarity_top3.csv）"
+    )
+    parser.add_argument(
+        "--exclude-query",
+        action="append",
+        default=None,
+        help="从专家基准评估中排除的查询文件名（可多次指定）"
+    )
+    parser.add_argument(
         "--predict",
         type=str,
         help="对指定 DXF 做结构类型识别（仅 11D 统计特征，无 GNN）"
@@ -186,7 +205,10 @@ def main(argv=None):
             _run_intra_benchmark(run_dir)
     elif args.expert_benchmark:
         with run_output("expert_benchmark") as run_dir:
-            _run_expert_benchmark(run_dir)
+            _run_expert_benchmark(run_dir, exclude_queries=args.exclude_query)
+    elif args.topk_benchmark:
+        with run_output("topk_benchmark") as run_dir:
+            _run_topk_benchmark(run_dir)
     elif args.predict:
         with run_output("predict") as run_dir:
             from classification.classifier import StructureTypeClassifier

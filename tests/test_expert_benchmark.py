@@ -6,6 +6,7 @@ import os
 import pytest
 
 from benchmark.expert_retrieval import ndcg_at_k, pairwise_accuracy, spearman
+from benchmark.expert_retrieval import _detect_encoding
 
 
 def test_ndcg_perfect_ranking_is_one():
@@ -35,8 +36,10 @@ def test_expert_template_format():
         "benchmark",
         "expert_similarity.csv",
     )
-    with open(path, encoding="utf-8-sig") as f:
+    with open(path, encoding=_detect_encoding(path)) as f:
         rows = list(csv.DictReader(f))
     assert rows
     assert set(rows[0]) == {"query_id", "candidate_id", "score", "comment"}
-    assert all(row["score"] == "" for row in rows)
+    # 扩样后模板应同时包含已填分数（首轮 9 query）与待填行（新 query）
+    assert any(row["score"].strip() != "" for row in rows)
+    assert any(row["score"].strip() == "" for row in rows)
