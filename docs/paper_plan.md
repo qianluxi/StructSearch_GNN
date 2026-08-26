@@ -60,3 +60,34 @@ GNN 作为对照实验，不承担核心方法角色。
 - Union 重排器研究（简单 Hybrid 重排未超越 Statistics，重排器是关键）。
 - 更大规模专家标注与跨项目样本。
 - UMAP 可视化作为辅助材料。
+
+## 最终验收实验（2026-08-26，全部通过）
+
+### ① Project-blind 静态代码审计
+
+结论见 `docs/project_blind_audit.md`：检索路径（classifier / search_engine /
+processor / index_builder）中的 filename 仅用于"排除自身 + 结果展示"；
+`rg "project_id" src/retrieval src/classification src/pipeline` 为 0 处；
+项目名解析（`parse_drawing_meta`）只出现在数据准备与基准（评估）模块。
+
+### ② 端到端 Project-Blind 验证
+
+`python -m src.benchmark.project_blind_verify`
+
+同一 DXF 复制为两个随机命名副本（内容逐字节相同），跑完整两阶段流水线：
+结构类型、置信度、Top-5 文件名与相似度分数**逐位一致**（CPU 下确定性比较）。
+
+### ③ 项目名置换检验
+
+`python -m src.benchmark.project_permutation`
+
+对 21 个项目名做确定性置换（seed 42 改名 19 个、seed 7 改名 20 个），
+Expert NDCG@3（Statistics 0.7214 / GNN 0.5947 / Hybrid 0.7135）与
+weak MRR（0.5800）**完全不变**；项目感知弱指标同样不变（等价关系在置换下保持，
+数学上符合预期）。结论：检索指标对项目身份置换不变，可作为论文中的
+"Project identity does not participate in retrieval" 的实证证据。
+
+## 当前结论
+
+方法可冻结：算法、数据处理、评价标准均已稳定，33+ 项测试全绿。
+下一步进入论文写作，不再进行大规模程序开发。
