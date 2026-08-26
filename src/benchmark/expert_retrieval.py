@@ -168,13 +168,27 @@ def _aggregate(items):
     }
 
 
-def _aggregate_ndcg_mrr(items):
-    """子集指标聚合：items = [(ndcg, mrr), ...]。"""
+def _recall_at_k(rel, k, threshold):
+    rel = list(rel)
+    total = sum(1 for r in rel if r >= threshold)
+    if total == 0:
+        return 0.0
+    return sum(1 for r in rel[:k] if r >= threshold) / total
+
+
+def _aggregate_subset(items):
+    """子集指标聚合：items = [(ndcg3, ndcg5, recall3, recall5, mrr), ...]。"""
     if not items:
-        return {"ndcg5": 0.0, "mrr": 0.0, "n": 0}
+        return {
+            "ndcg3": 0.0, "ndcg5": 0.0,
+            "recall3": 0.0, "recall5": 0.0, "mrr": 0.0, "n": 0,
+        }
     return {
-        "ndcg5": float(np.nanmean([it[0] for it in items])),
-        "mrr": float(np.nanmean([it[1] for it in items])),
+        "ndcg3": float(np.nanmean([it[0] for it in items])),
+        "ndcg5": float(np.nanmean([it[1] for it in items])),
+        "recall3": float(np.nanmean([it[2] for it in items])),
+        "recall5": float(np.nanmean([it[3] for it in items])),
+        "mrr": float(np.nanmean([it[4] for it in items])),
         "n": len(items),
     }
 
@@ -280,14 +294,19 @@ def run(
                 sims_sub = _cosine(q_vec, db_vecs[pool_idx])
                 order_sub = np.argsort(-sims_sub)
                 rel_sub = [pool[pool_names[k]] for k in order_sub]
-                ndcg_sub = ndcg_at_k(rel_sub, topk)
+                ndcg3_sub = ndcg_at_k(rel_sub, 3)
+                ndcg5_sub = ndcg_at_k(rel_sub, 5)
+                recall3_sub = _recall_at_k(rel_sub, 3, mrr_threshold)
+                recall5_sub = _recall_at_k(rel_sub, 5, mrr_threshold)
                 relevant_sub = [
                     i for i, r in enumerate(rel_sub) if r >= mrr_threshold
                 ]
                 mrr_sub = (
                     1.0 / (relevant_sub[0] + 1) if relevant_sub else 0.0
                 )
-                records[method][subset_name].append((ndcg_sub, mrr_sub))
+                records[method][subset_name].append(
+                    (ndcg3_sub, ndcg5_sub, recall3_sub, recall5_sub, mrr_sub)
+                )
 
     print("\n=== Benchmark C：Expert Retrieval ===")
     print(
@@ -300,8 +319,8 @@ def run(
     for method in methods:
         row = _aggregate(records[method]["all"])
         row["subsets"] = {
-            "same": _aggregate_ndcg_mrr(records[method]["same"]),
-            "cross": _aggregate_ndcg_mrr(records[method]["cross"]),
+            "same": _aggregate_subset(records[method]["same"]),
+            "cross": _aggregate_subset(records[method]["cross"]),
         }
         row["excluded_queries"] = sorted(exclude_queries)
         summary[method] = row
@@ -310,12 +329,16 @@ def run(
             f'{row["pairwise_accuracy"]:9.2%} {row["spearman"]:9.4f}'
         )
 
-    print("\n=== 子集拆分：NDCG@5（同项目 / 跨项目） ===")
-    print(f'{"method":12s} {"同项目(n)":>12s} {"跨项目(n)":>12s}')
-    for method in methods:
-        s = summary[method]["subsets"]["same"]
-        c = summary[method]["subsets"]["cross"]
-        print(f'{method:12s} {s["ndcg5"]:8.4f}({s["n"]}) {c["ndcg5"]:8.4f}({c["n"]})')
+    print("\n=== 子集拆分：同项目 / 跨项目（候选级） ===")
+    for subset_name, label in (("same", "同项目"), ("cross", "跨项目")):
+        print(f"--- {label} ---")
+        print(f'{"method":12s} {"NDCG@3":>8s} {"NDCG@5":>8s} {"Recall@3":>9s} {"Recall@5":>9s} {"n":>4s}')
+        for method in methods:
+            s = summary[method]["subsets"][subset_name]
+            print(
+                f'{method:12s} {s["ndcg3"]:8.4f} {s["ndcg5"]:8.4f} '
+                f'{s["recall3"]:9.2%} {s["recall5"]:9.2%} {s["n"]:4d}'
+            )
     if exclude_queries:
         print(f"（已排除查询: {sorted(exclude_queries)}）")
 

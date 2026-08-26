@@ -83,6 +83,22 @@ def _run_topk_benchmark(run_dir):
     run_topk(save_dir=run_dir)
 
 
+def _run_feature_ablation(run_dir):
+    """执行论文实验一：Statistics 特征分组消融。"""
+    from benchmark.feature_ablation import run as run_ablation
+
+    print("\n[Feature Ablation] 开始特征分组消融...")
+    run_ablation(save_dir=run_dir)
+
+
+def _run_baselines(run_dir):
+    """执行论文实验三：传统 Baseline 对比。"""
+    from benchmark.baselines import run as run_baselines
+
+    print("\n[Baselines] 开始传统 Baseline 对比...")
+    run_baselines(save_dir=run_dir)
+
+
 def _write_intra_result_summary(run_dir, dxf_path, result):
     """把两阶段检索结果写入 result.txt。"""
     lines = [
@@ -161,6 +177,16 @@ def main(argv=None):
         help="运行 Benchmark C v2：Top-K 候选集评估（需先填写 expert_similarity_top3.csv）"
     )
     parser.add_argument(
+        "--ablation",
+        action="store_true",
+        help="运行论文实验一：Statistics 特征分组消融"
+    )
+    parser.add_argument(
+        "--baselines",
+        action="store_true",
+        help="运行论文实验三：传统 Baseline 对比（Random/原始统计/距离变体/GNN/Hybrid）"
+    )
+    parser.add_argument(
         "--exclude-query",
         action="append",
         default=None,
@@ -209,6 +235,12 @@ def main(argv=None):
     elif args.topk_benchmark:
         with run_output("topk_benchmark") as run_dir:
             _run_topk_benchmark(run_dir)
+    elif args.ablation:
+        with run_output("ablation") as run_dir:
+            _run_feature_ablation(run_dir)
+    elif args.baselines:
+        with run_output("baselines") as run_dir:
+            _run_baselines(run_dir)
     elif args.predict:
         with run_output("predict") as run_dir:
             from classification.classifier import StructureTypeClassifier
