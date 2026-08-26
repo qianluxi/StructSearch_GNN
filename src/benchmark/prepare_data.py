@@ -28,6 +28,7 @@ for _path in (SRC_DIR, ROOT_DIR):
 from benchmark.expert_retrieval import _detect_encoding
 from classification.classifier import StructureTypeClassifier
 from datasets.structure_dataset import StructureDataset
+from datasets.schemas import parse_drawing_meta
 from retrieval.config import load_retrieval_config
 from retrieval.search_engine import SearchEngine
 
@@ -78,7 +79,7 @@ def build_query_plan(dataset, plan):
     proj_type = defaultdict(lambda: defaultdict(list))
     for i in range(len(dataset)):
         name = dataset[i].filename
-        proj = name.split("_")[0]
+        proj = parse_drawing_meta(name).project_id
         t = int(dataset[i].y.item())
         proj_type[proj][t].append(name)
 
@@ -114,7 +115,7 @@ def build_query_plan(dataset, plan):
             "target": n,
             "cross": n_cross,
             "same": n - n_cross,
-            "n_projects": len({q.split("_")[0] for q in chosen}),
+            "n_projects": len({parse_drawing_meta(q).project_id for q in chosen}),
         }
     return queries, meta
 
@@ -125,7 +126,7 @@ def write_weak_labels(cfg_path=None, out_path=None):
     dataset = _dataset(cfg)
     names = [dataset[i].filename for i in range(len(dataset))]
     labels = [int(dataset[i].y.item()) for i in range(len(dataset))]
-    projects = [name.split("_")[0] for name in names]
+    projects = [parse_drawing_meta(name).project_id for name in names]
 
     rows = []
     for i in range(len(names)):

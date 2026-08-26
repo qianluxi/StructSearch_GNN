@@ -117,7 +117,10 @@ class SearchEngine:
 
     # -------------------------------------------------------
     def _query_vector(self, data, method):
-        """按检索路线构造查询向量（statistics 不需要模型前向）。"""
+        """按检索路线构造查询向量（statistics 不需要模型前向）。
+
+        仅使用结构特征（11D 统计 / GNN 嵌入 / 组合）；不包含项目名称等元数据。
+        """
         stats_vec = data.graph_feature.cpu().numpy().ravel()
 
         if method == "statistics":
@@ -139,6 +142,9 @@ class SearchEngine:
     @torch.no_grad()
     def search_by_type(self, data, type_id, topk=5, method="hybrid"):
         """Stage 2：在指定结构类型内检索最相似案例。
+
+        Project-blind：检索只使用结构特征与类型过滤；query 的文件名仅用于
+        排除自身与结果展示，项目名称不参与任何相似度计算。
 
         Args:
             data: 已标准化的查询 Data（可由 StructureTypeClassifier.predict 提供）

@@ -10,7 +10,7 @@
 - 指标：Accuracy / Precision / Recall / F1 / Confusion Matrix
 - 回答："结构类型判断是否可靠？"
 
-## Benchmark B：Weak Project Retrieval（弱项目检索）
+## Benchmark B：Weak Project Retrieval（弱项目检索 / 项目一致性分析）
 
 - 文件：`weak_project_labels.csv`（query_id, candidate_id, weak_relevance 0/1）
 - 相关集定义：`weak_project_relevance` = 同工程且同类（**仅弱先验**）
@@ -19,6 +19,8 @@
 - 作用：快速回归测试，测"能否找到同项目/同类案例"，**不能**回答"是否结构上最相似"
 - 注意：仅包含存在 ≥1 个同项目同类案例的查询；无正样本的查询（如某工程仅 1 张图）
   被排除，归入未来的 Cross-Project Retrieval Benchmark。
+- 原则：检索阶段不使用项目名称（Project-blind）；"同项目"只作为评估分析维度，
+  不是相关性 Ground Truth。
 
 ## Benchmark C：Expert Retrieval（专家结构相似性检索）——最终裁决基准
 

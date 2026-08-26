@@ -265,6 +265,9 @@ The system is split into two stages:
    Consolidate duplicates rather than adding more.
 6. When a model, dataset, or config default changes, update the corresponding
    tests and configs in the same commit.
+7. Retrieval must be project-blind: the project name never participates in
+   feature computation, type recognition, or similarity scoring; it is
+   evaluation/display metadata only (see `datasets.schemas.parse_drawing_meta`).
 
 ---
 

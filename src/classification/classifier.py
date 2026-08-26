@@ -67,6 +67,9 @@ class StructureTypeClassifier:
     def predict(self, data):
         """对已标准化的 Data 对象做结构类型识别。
 
+        Project-blind：仅使用 11D 统计特征；文件名只用于排除自身，
+        项目名称不参与计算。
+
         Args:
             data: process_single_dxf + standardize_data 后的 Data
 

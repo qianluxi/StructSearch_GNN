@@ -20,6 +20,7 @@ for _path in (SRC_DIR, ROOT_DIR):
 
 import numpy as np
 
+from datasets.schemas import parse_drawing_meta
 from retrieval.config import CLASS_NAMES, load_retrieval_config
 
 
@@ -72,7 +73,7 @@ def run(save_dir=None, cfg_path=None):
 
     embeddings, filenames, labels = _load_index(cfg)
     dim = cfg.embedding.dim
-    projects = np.array([name.split("_")[0] for name in filenames])
+    projects = np.array([parse_drawing_meta(name).project_id for name in filenames])
     methods = ["statistics", "gnn", "hybrid"]
 
     print("\n=== Benchmark B：Weak Project Retrieval（类内三路线对比） ===")

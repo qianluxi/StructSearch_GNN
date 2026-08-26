@@ -29,6 +29,7 @@ for _path in (SRC_DIR, ROOT_DIR):
 
 import numpy as np
 
+from datasets.schemas import parse_drawing_meta
 from retrieval.config import load_retrieval_config
 
 DEFAULT_LABELS = os.path.join(
@@ -275,15 +276,15 @@ def run(
             records[method]["all"].append((ndcg, mrr, pair, sp))
 
             # 子集：同项目 / 跨项目（候选级拆分）
-            q_proj = query.split("_")[0]
+            q_proj = parse_drawing_meta(query).project_id
             pools = {
                 "same": {
                     c: s for c, s in cand_scores.items()
-                    if c.split("_")[0] == q_proj
+                    if parse_drawing_meta(c).project_id == q_proj
                 },
                 "cross": {
                     c: s for c, s in cand_scores.items()
-                    if c.split("_")[0] != q_proj
+                    if parse_drawing_meta(c).project_id != q_proj
                 },
             }
             for subset_name, pool in pools.items():
@@ -329,7 +330,7 @@ def run(
             f'{row["pairwise_accuracy"]:9.2%} {row["spearman"]:9.4f}'
         )
 
-    print("\n=== 子集拆分：同项目 / 跨项目（候选级） ===")
+    print("\n=== 分析维度拆分：同项目 / 跨项目（项目名仅用于评估，不参与检索） ===")
     for subset_name, label in (("same", "同项目"), ("cross", "跨项目")):
         print(f"--- {label} ---")
         print(f'{"method":12s} {"NDCG@3":>8s} {"NDCG@5":>8s} {"Recall@3":>9s} {"Recall@5":>9s} {"n":>4s}')
