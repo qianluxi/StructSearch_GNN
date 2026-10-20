@@ -1,0 +1,21 @@
+序号,文献,年份,技术路线,本项目路线,核心方法,原文PDF,BibTeX_key
+1,de las Heras et al.,2014,感知统计描述子,statistics,行长度直方图签名 + 平面图检索,delasHeras2014_RunlengthHistogram_FloorPlans.pdf,delasheras2014runlength
+2,Rodrigues et al.,2017,几何形状描述子（无监督聚类）,statistics,4 种形状描述子对比（Tangent Distance 最佳）,Rodrigues2017_Clustering_FloorPlans.pdf,rodrigues2017clustering
+3,Ahmed et al.,2013,结构/语义特征检索,statistics,自动平面图分析 + 图结构语义表示 + 图匹配,Ahmed2013_Analysis_SketchRetrieval_FloorPlans.pdf,ahmed2013automatic
+4,Sharma & Chattopadhyay,2018,高层语义特征加权检索,statistics,语义特征提取 + 特征加权融合、细粒度检索,SharmaThesis_ContentBasedFloorPlanRetrieval.pdf,sharma2018high
+5,Ling et al.,2025,特征检索综述（3ST）,statistics,语义/空间/形状/纹理特征方法论综述,Survey2025_FloorPlanRetrieval_MDPI.pdf,ling2025survey
+6,Sabri et al.,2017,图匹配（CBR + 精确/非精确）,gnn（符号化对照）,同系统对比 CBR / VF2 精确 / 非精确图匹配,Sabri2017_SemanticPattern_FloorPlanRetrieval_ICPRAM.pdf,sabri2017semantic
+7,Roith et al.,2017,图指纹 / 图匹配 + 联邦库,gnn（符号化对照）,AGraphML 图指纹 + neo4j + 多服务规则编排,Roith2017_GraphBasedDesign_FederatedDB_VisEng.pdf,roith2017supporting
+8,Aamodt & Plaza,1994,CBR 方法学（4R 框架）,statistics / hybrid 框架,检索-复用-修正-保留（4R）,AamodtPlaza1994_CBR_Foundations.pdf,aamodt1994case
+9,Börner,1993,CBR 两级结构相似性,hybrid,表面特征粗筛 + 结构相似精匹配,Borner1993_StructuralSimilarity_CBR.pdf,borner1993structural
+10,Liao et al.,1998,案例相似度度量,statistics / hybrid,相似度度量综述 + 混合（crisp/fuzzy）度量,Liao1998_SimilarityMeasures_CBR.pdf,liao1998similarity
+11,Wang & Howard,1991,结构设计 CBR 框架,statistics / hybrid,DDIS：黑板 + 案例相关/无关推理,WangHoward1991_IntegratedCBR_StructuralDesign.pdf,wang1991integrated
+12,Sriram Maher & Fenves,1985,知识系统综述,statistics（问题背景）,KBES 在初步/分析/详图设计中的应用,SriramMaherFenves1985_KBES_StructuralDesign.pdf,sriram1985knowledge
+13,Maher,1987,结构选型知识系统,statistics（思想前身）,HI-RISE / FLODER / LOCATOR / STRUPLE,Maher1987_ExpertSystems_StructuralDesign.pdf,maher1987expert
+14,Maher & Gómez de Silva Garza,1996,设计 CBR,statistics / hybrid,四个案例化建筑设计系统,MaherGomez1996_CBR_StructuralDesign.pdf,maher1996developing
+15,Maher & Gómez de Silva Garza,1997,设计 CBR 综述,statistics / hybrid,设计辅助 vs 设计自动化,MaherGomez1997_CBR_in_Design.pdf,maher1997case
+16,Soibelman & Peña-Mora,2000,多推理机制 CBR,hybrid,M-RAM 分布式多推理（案例 + 规则）,SoibelmanPenaMora2000_MRAM_ConceptualStructuralDesign.pdf,soibelman2000distributed
+17,Napps et al.,2021,CBR + 模式匹配,hybrid,BIM 变体检索（CBR + 图模式匹配）,Napps2021_BIM_VariantRetrieval_CBR.pdf,napps2021bim
+18,Zhang et al.,2006,学习式（BP）案例检索,gnn / hybrid 对照,BP 神经网络替代传统距离度量做案例检索,Zhang2006_BP_CaseRetrieval_HighriseStructureForm.pdf,zhang2006bp
+19,van Engelenburg et al.,2023,无学习结构相似度（SSIG）,statistics,IoU + 图编辑距离（GED），无需学习,vanEngelenburg2023_SSIG_FloorPlan.pdf,vanengelenburg2023ssig
+20,Ayzenshtadt et al.,2016,多智能体 CBR 编排,hybrid,MetisCBR：多智能体 + 语义指纹,Ayzenshtadt2016_ThinkingWithContainers_ICAART.pdf,ayzenshtadt2016thinking
