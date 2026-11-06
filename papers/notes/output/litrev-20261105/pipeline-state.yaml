@@ -1,0 +1,41 @@
+request_id: litrev-20261105
+user_query: "就按推荐的选择，生成word"
+entry_type: beautify_only
+created_at: "2026-11-05T20:52:00+08:00"
+current_stage: 3  # 完成
+output_docx_path: "F:/project/PyProject/GNN/StructSearch_v2/papers/notes/文献综述_初稿_v1.docx"
+output_docx_user_specified: false
+
+stages:
+  stage_1:
+    status: skipped
+    note: "内容来源为既有 Markdown（文献综述_初稿_v1.md），不重跑创作"
+  stage_2:
+    status: completed
+    completed_at: "2026-11-05T20:55:00+08:00"
+    executor: doc-formatter
+    route: html
+    html_sub: template
+    genre: academic-paper
+    template_used: academic-paper
+    output_path: "stage2/formatted-结构相似性检索综述.html"
+    output_format: html
+    skills_invoked: [design-token, doc-typeset, html-review]
+    html_review_attempts: 1
+    html_review_score: 100
+    fallback: false
+    fallback_reason: null
+  stage_3:
+    status: completed
+    completed_at: "2026-11-05T21:08:00+08:00"
+    executor: doc-converter
+    input_format: html
+    output_path: "F:/project/PyProject/GNN/StructSearch_v2/papers/notes/文献综述_初稿_v1.docx"
+    skill_used: ["html-to-doc"]
+    present_files_opened: true
+    verify_mode: "fast_channel_no_verify"
+    verify_note: "S-5/S-8 为三段式分节启发式；本转换器仅产出 2 个 sectPr（封面 / 目录+正文），已用 pageBreakBefore 保证正文另起页"
+    chunks: 156
+    fallback: false
+
+consistency_check: "stage_2.output_format == html 且文件存在"
